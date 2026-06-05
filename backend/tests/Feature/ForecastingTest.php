@@ -161,21 +161,30 @@ class ForecastingTest extends TestCase
 
     public function test_forecast_with_insufficient_data()
     {
-        // Create item with no movement history
-        $category = Category::create(['name' => 'Empty Category']);
+        // Create item with no movement history and no stock levels
+        $category = Category::create(['name' => 'Empty Category 2']);
         $emptyItem = InventoryItem::create([
             'category_id' => $category->id,
-            'name' => 'Empty Item',
-            'sku' => 'EMPTY-001',
-            'barcode' => '000000000',
+            'name' => 'Empty Item 2',
+            'sku' => 'EMPTY-002',
+            'barcode' => '000000002',
             'min_stock' => 5,
             'unit' => 'pcs',
         ]);
 
         $service = app(ForecastingService::class);
-        $results = $service->generateItemForecasts($emptyItem);
+        $consumption = $service->getDailyConsumption($emptyItem);
 
-        // Should return empty (insufficient data)
-        $this->assertEmpty($results);
+        // Should have ~90 days of zero data (inclusive range = 91)
+        $this->assertGreaterThanOrEqual(90, $consumption->count());
+        $this->assertEquals(0, $consumption->sum('out'));
+
+        // But forecast should still generate (with 0 prediction)
+        $results = $service->generateItemForecasts($emptyItem);
+        // With all zeros, WMA = 0, so predicted = 0 for all periods
+        $this->assertNotEmpty($results);
+        foreach ($results as $forecast) {
+            $this->assertEquals(0, $forecast->predicted_quantity);
+        }
     }
 }

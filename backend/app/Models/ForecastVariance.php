@@ -8,11 +8,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class ForecastVariance extends Model
 {
     protected $fillable = [
-        'stock_forecast_id',
-        'actual_quantity',
-        'variance',
-        'variance_percentage',
-        'recorded_date',
+        'stock_forecast_id', 'actual_quantity', 'variance', 'variance_percentage', 'recorded_date',
     ];
 
     protected $casts = [
@@ -24,6 +20,6 @@ class ForecastVariance extends Model
 
     public function stockForecast(): BelongsTo
     {
-        return $this->belongsTo(StockForecast::class);
+        return $this->belongsTo(StockForecast::class, 'stock_forecast_id');
     }
 }
