@@ -1,11 +1,20 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from "react";
+import reactLogo from "./assets/react.svg";
+import viteLogo from "./assets/vite.svg";
+import heroImg from "./assets/hero.png";
+import "./App.css";
+import api from "./lib/axios";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [count, setCount] = useState(0);
+  const [backendStatus, setBackendStatus] = useState("loading...");
+
+  useEffect(() => {
+    api
+      .get("/ping")
+      .then((res) => setBackendStatus(res.data.message))
+      .catch(() => setBackendStatus("gagal konek"));
+  }, []);
 
   return (
     <>
@@ -19,6 +28,9 @@ function App() {
           <h1>Get started</h1>
           <p>
             Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
+          </p>
+          <p>
+            Backend status: <code>{backendStatus}</code>
           </p>
         </div>
         <button
@@ -116,7 +128,7 @@ function App() {
       <div className="ticks"></div>
       <section id="spacer"></section>
     </>
-  )
+  );
 }
 
-export default App
+export default App;
