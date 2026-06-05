@@ -48,10 +48,18 @@ Route::middleware('auth:sanctum')->group(function () {
     // All authenticated users
     Route::get('/roles', [RoleController::class, 'index']);
 
+    // Staff can read
+    Route::middleware('role:admin,manager,staff')->group(function () {
+        Route::get('/locations', [LocationController::class, 'index']);
+        Route::get('/locations/{location}', [LocationController::class, 'show']);
+        Route::get('/categories', [CategoryController::class, 'index']);
+        Route::get('/categories/{category}', [CategoryController::class, 'show']);
+    });
+
     // Admin/Manager only
     Route::middleware('role:admin,manager')->group(function () {
-        Route::apiResource('categories', CategoryController::class);
-        Route::apiResource('locations', LocationController::class);
+        Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
+        Route::apiResource('locations', LocationController::class)->except(['index', 'show']);
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('inventory-items', InventoryItemController::class)->except(['index', 'show']);
         Route::post('/approvals/{approvalRequest}/decide', [ApprovalController::class, 'decide']);
