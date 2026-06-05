@@ -16,8 +16,10 @@ export default function InventoryPage() {
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
 
+  const [locations, setLocations] = useState([]);
+
   const [form, setForm] = useState({
-    name: '', sku: '', barcode: '', description: '', category_id: '', min_stock: 0, unit: 'pcs',
+    name: '', sku: '', barcode: '', description: '', category_id: '', min_stock: 0, unit: 'pcs', initial_stock: 0, location_id: '',
   });
 
   const fetchItems = async () => {
@@ -37,9 +39,12 @@ export default function InventoryPage() {
 
   useEffect(() => { fetchItems(); }, [page, search, categoryFilter, statusFilter]);
   useEffect(() => { fetchCategories(); }, []);
+  useEffect(() => {
+    api.get('/locations').then((res) => setLocations(res.data.data || res.data)).catch(() => {});
+  }, []);
 
   const resetForm = () => {
-    setForm({ name: '', sku: '', barcode: '', description: '', category_id: '', min_stock: 0, unit: 'pcs' });
+    setForm({ name: '', sku: '', barcode: '', description: '', category_id: '', min_stock: 0, unit: 'pcs', initial_stock: 0, location_id: '' });
     setEditing(null);
     setShowForm(false);
   };
@@ -50,7 +55,7 @@ export default function InventoryPage() {
       if (editing) {
         await api.put(`/inventory-items/${editing.id}`, form);
       } else {
-        await api.post('/inventory-items', form);
+        await api.post('/inventory-items', { ...form, location_id: form.location_id || undefined, initial_stock: form.initial_stock || undefined });
       }
       resetForm();
       fetchItems();
@@ -65,7 +70,12 @@ export default function InventoryPage() {
   };
 
   const startEdit = (item) => {
-    setForm({ name: item.name, sku: item.sku, barcode: item.barcode, description: item.description, category_id: item.category_id, min_stock: item.min_stock, unit: item.unit });
+    const firstSl = item.stock_levels?.[0];
+    setForm({
+      name: item.name, sku: item.sku, barcode: item.barcode, description: item.description,
+      category_id: item.category_id, min_stock: item.min_stock, unit: item.unit,
+      initial_stock: firstSl?.quantity || 0, location_id: firstSl?.location_id || '',
+    });
     setEditing(item);
     setShowForm(true);
   };
@@ -208,6 +218,17 @@ export default function InventoryPage() {
                 <div>
                   <label className="label">Description</label>
                   <input className="input" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                </div>
+                <div>
+                  <label className="label">{editing ? 'Stock' : 'Initial Stock'}</label>
+                  <input className="input" type="number" min="0" value={form.initial_stock} onChange={(e) => setForm({ ...form, initial_stock: parseInt(e.target.value) || 0 })} />
+                </div>
+                <div>
+                  <label className="label">Location</label>
+                  <select className="input" value={form.location_id} onChange={(e) => setForm({ ...form, location_id: e.target.value })}>
+                    <option value="">Select location...</option>
+                    {locations.map((l) => <option key={l.id} value={l.id}>{l.zone}-{l.rack}-{l.bin}</option>)}
+                  </select>
                 </div>
               </div>
               <div className="flex justify-end gap-2 pt-2">

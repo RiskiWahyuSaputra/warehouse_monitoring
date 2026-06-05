@@ -62,11 +62,29 @@ class InventoryItemController extends Controller
             'description' => 'nullable|string',
             'min_stock' => 'nullable|integer|min:0',
             'unit' => 'required|string|max:20',
+            'initial_stock' => 'nullable|integer|min:0',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
-        $item = InventoryItem::create($validated);
+        $item = InventoryItem::create([
+            'category_id' => $validated['category_id'],
+            'name' => $validated['name'],
+            'sku' => $validated['sku'],
+            'barcode' => $validated['barcode'],
+            'description' => $validated['description'] ?? null,
+            'min_stock' => $validated['min_stock'] ?? 0,
+            'unit' => $validated['unit'],
+        ]);
 
-        return response()->json($item, Response::HTTP_CREATED);
+        if (($validated['initial_stock'] ?? 0) > 0 && !empty($validated['location_id'])) {
+            $item->stockLevels()->create([
+                'location_id' => $validated['location_id'],
+                'quantity' => $validated['initial_stock'],
+                'reserved_quantity' => 0,
+            ]);
+        }
+
+        return response()->json($item->load('category', 'stockLevels.location'), Response::HTTP_CREATED);
     }
 
     /**
@@ -90,11 +108,29 @@ class InventoryItemController extends Controller
             'description' => 'nullable|string',
             'min_stock' => 'nullable|integer|min:0',
             'unit' => 'sometimes|required|string|max:20',
+            'initial_stock' => 'nullable|integer|min:0',
+            'location_id' => 'nullable|exists:locations,id',
         ]);
 
         $inventoryItem->update($validated);
 
-        return response()->json($inventoryItem);
+        if ($request->hasAny(['initial_stock', 'location_id']) && !empty($validated['location_id'])) {
+            $stockLevel = $inventoryItem->stockLevels()
+                ->where('location_id', $validated['location_id'])
+                ->first();
+
+            if ($stockLevel) {
+                $stockLevel->update(['quantity' => $validated['initial_stock'] ?? 0]);
+            } elseif (($validated['initial_stock'] ?? 0) > 0) {
+                $inventoryItem->stockLevels()->create([
+                    'location_id' => $validated['location_id'],
+                    'quantity' => $validated['initial_stock'],
+                    'reserved_quantity' => 0,
+                ]);
+            }
+        }
+
+        return response()->json($inventoryItem->load('category', 'stockLevels.location'));
     }
 
     /**
