@@ -12,6 +12,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class StockMovementController extends Controller
 {
@@ -39,12 +40,18 @@ class StockMovementController extends Controller
         $validated['user_id'] = $request->user()->id;
 
         DB::transaction(function () use ($validated, $request) {
-            $movement = StockMovement::create($validated);
-
             $stockLevel = StockLevel::firstOrCreate([
                 'inventory_item_id' => $validated['inventory_item_id'],
                 'location_id' => $validated['location_id'],
             ]);
+
+            if ($validated['type'] === 'out' && $stockLevel->quantity < $validated['quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity' => ['Stok tidak mencukupi. Stok saat ini: ' . $stockLevel->quantity],
+                ]);
+            }
+
+            $movement = StockMovement::create($validated);
 
             if ($validated['type'] === 'in') {
                 $stockLevel->increment('quantity', $validated['quantity']);
@@ -85,13 +92,19 @@ class StockMovementController extends Controller
 
         DB::transaction(function () use ($validated, $userId) {
             foreach ($validated['movements'] as $mv) {
-                $mv['user_id'] = $userId;
-                StockMovement::create($mv);
-
                 $stockLevel = StockLevel::firstOrCreate([
                     'inventory_item_id' => $mv['inventory_item_id'],
                     'location_id' => $mv['location_id'],
                 ]);
+
+                if ($mv['type'] === 'out' && $stockLevel->quantity < $mv['quantity']) {
+                    throw ValidationException::withMessages([
+                        'quantity' => ['Stok tidak mencukupi untuk item ID ' . $mv['inventory_item_id'] . '. Stok: ' . $stockLevel->quantity],
+                    ]);
+                }
+
+                $mv['user_id'] = $userId;
+                StockMovement::create($mv);
 
                 if ($mv['type'] === 'in') {
                     $stockLevel->increment('quantity', $mv['quantity']);
@@ -119,6 +132,17 @@ class StockMovementController extends Controller
         $userId = $request->user()->id;
 
         DB::transaction(function () use ($validated, $userId) {
+            $fromStock = StockLevel::firstOrCreate([
+                'inventory_item_id' => $validated['inventory_item_id'],
+                'location_id' => $validated['from_location_id'],
+            ]);
+
+            if ($fromStock->quantity < $validated['quantity']) {
+                throw ValidationException::withMessages([
+                    'quantity' => ['Stok tidak mencukupi di lokasi asal. Stok: ' . $fromStock->quantity],
+                ]);
+            }
+
             StockMovement::create([
                 'inventory_item_id' => $validated['inventory_item_id'],
                 'location_id' => $validated['from_location_id'],
@@ -137,10 +161,6 @@ class StockMovementController extends Controller
                 'remarks' => 'Transfer from ' . $validated['from_location_id'] . ($validated['remarks'] ? ': ' . $validated['remarks'] : ''),
             ]);
 
-            $fromStock = StockLevel::firstOrCreate([
-                'inventory_item_id' => $validated['inventory_item_id'],
-                'location_id' => $validated['from_location_id'],
-            ]);
             $fromStock->decrement('quantity', $validated['quantity']);
 
             $toStock = StockLevel::firstOrCreate([
