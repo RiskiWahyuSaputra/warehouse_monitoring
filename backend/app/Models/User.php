@@ -50,10 +50,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Get the role that owns the user.
+     * Get the role associated with the user.
      */
-    public function role()
+    public function role(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(Role::class);
     }
+
 }
