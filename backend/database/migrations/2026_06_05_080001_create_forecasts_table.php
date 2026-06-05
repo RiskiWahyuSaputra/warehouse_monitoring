@@ -19,7 +19,7 @@ return new class extends Migration
             $table->date('forecast_date');
             $table->date('target_date');
             $table->timestamps();
-            $table->index(['inventory_item_id', 'period_days', 'forecast_date']);
+            $table->index(['inventory_item_id', 'period_days', 'forecast_date'], 'sf_inv_period_date_idx');
         });
 
         Schema::create('forecast_variances', function (Blueprint $table) {
