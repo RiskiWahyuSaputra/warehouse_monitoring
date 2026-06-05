@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\ApprovalStatus;
 use App\Http\Controllers\Controller;
+use App\Models\ApprovalRequest;
 use App\Models\InventoryItem;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
@@ -33,9 +35,10 @@ class StockMovementController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
+        if (empty($validated['supplier_id'])) unset($validated['supplier_id']);
         $validated['user_id'] = $request->user()->id;
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $request) {
             $movement = StockMovement::create($validated);
 
             $stockLevel = StockLevel::firstOrCreate([
@@ -49,6 +52,19 @@ class StockMovementController extends Controller
                 $stockLevel->decrement('quantity', $validated['quantity']);
             } else {
                 $stockLevel->update(['quantity' => $validated['quantity']]);
+            }
+
+            // Auto-buat approval request untuk stock out
+            if ($validated['type'] === 'out') {
+                ApprovalRequest::create([
+                    'requester_id' => $request->user()->id,
+                    'inventory_item_id' => $validated['inventory_item_id'],
+                    'location_id' => $validated['location_id'],
+                    'quantity' => $validated['quantity'],
+                    'remarks' => $validated['remarks'] ?? 'Stock out movement',
+                    'status' => 'pending',
+                    'stock_movement_id' => $movement->id,
+                ]);
             }
         });
 

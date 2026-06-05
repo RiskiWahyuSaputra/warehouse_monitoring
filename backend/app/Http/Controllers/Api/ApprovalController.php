@@ -5,9 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Enums\ApprovalStatus;
 use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
+use App\Models\StockLevel;
+use App\Models\StockMovement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 
 class ApprovalController extends Controller
 {
@@ -53,12 +56,34 @@ class ApprovalController extends Controller
             'remarks' => 'nullable|string',
         ]);
 
-        $approvalRequest->update([
-            'approver_id' => $request->user()->id,
-            'status' => ApprovalStatus::from($validated['decision']),
-            'remarks' => $validated['remarks'] ?? $approvalRequest->remarks,
-        ]);
+        DB::transaction(function () use ($request, $approvalRequest, $validated) {
+            $approvalRequest->update([
+                'approver_id' => $request->user()->id,
+                'status' => ApprovalStatus::from($validated['decision']),
+                'remarks' => $validated['remarks'] ?? $approvalRequest->remarks,
+            ]);
 
-        return response()->json($approvalRequest);
+            // Jika approved, buat movement dan kurangi stok
+            if ($validated['decision'] === 'approved' && !$approvalRequest->stock_movement_id) {
+                $movement = StockMovement::create([
+                    'inventory_item_id' => $approvalRequest->inventory_item_id,
+                    'location_id' => $approvalRequest->location_id,
+                    'user_id' => $approvalRequest->requester_id,
+                    'type' => 'out',
+                    'quantity' => $approvalRequest->quantity,
+                    'remarks' => 'Approved: ' . ($approvalRequest->remarks ?? 'Stock out'),
+                ]);
+
+                $approvalRequest->update(['stock_movement_id' => $movement->id]);
+
+                $stockLevel = StockLevel::firstOrCreate([
+                    'inventory_item_id' => $approvalRequest->inventory_item_id,
+                    'location_id' => $approvalRequest->location_id,
+                ]);
+                $stockLevel->decrement('quantity', $approvalRequest->quantity);
+            }
+        });
+
+        return response()->json($approvalRequest->fresh()->load('movement'));
     }
 }

@@ -40,7 +40,9 @@ export default function MovementsPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await api.post('/inventory/movements', form);
+      const payload = { ...form };
+      if (!payload.supplier_id) delete payload.supplier_id;
+      await api.post('/inventory/movements', payload);
       setForm({ inventory_item_id: '', location_id: '', type: 'in', quantity: 1, remarks: '', supplier_id: '' });
       setShowForm(false);
       fetchMovements();
