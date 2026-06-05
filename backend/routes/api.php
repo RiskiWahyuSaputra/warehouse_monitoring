@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\LocationController;
+use App\Http\Controllers\Api\SupplierController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,6 +16,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin,manager')->group(function () {
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('locations', LocationController::class);
+        Route::apiResource('suppliers', SupplierController::class);
     });
 });
 
