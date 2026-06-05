@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\InventoryItemController;
 use App\Http\Controllers\Api\LocationController;
 use App\Http\Controllers\Api\SupplierController;
 use Illuminate\Http\Request;
@@ -17,6 +18,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('categories', CategoryController::class);
         Route::apiResource('locations', LocationController::class);
         Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('inventory-items', InventoryItemController::class)->except(['index', 'show']);
+    });
+
+    Route::middleware('role:admin,manager,staff')->group(function () {
+        Route::apiResource('inventory-items', InventoryItemController::class)->only(['index', 'show']);
     });
 });
 
