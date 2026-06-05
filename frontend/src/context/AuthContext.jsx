@@ -1,55 +1,53 @@
-import { createContext, useState, useEffect, useContext } from 'react';
-import axios from '../lib/axios';
+import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../services/api';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
 
-export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
+export function AuthProvider({ children }) {
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchUser = async () => {
-            const token = localStorage.getItem('auth_token');
-            if (token) {
-                try {
-                    const response = await axios.get('/me');
-                    setUser(response.data.user);
-                } catch (error) {
-                    console.error("Token invalid or expired", error);
-                    localStorage.removeItem('auth_token');
-                }
-            }
-            setLoading(false);
-        };
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token && !user) {
+      api.get('/me')
+        .then((res) => {
+          setUser(res.data.user);
+          localStorage.setItem('user', JSON.stringify(res.data.user));
+        })
+        .catch(() => logout())
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
+    }
+  }, []);
 
-        fetchUser();
-    }, []);
+  const login = async (email, password) => {
+    const res = await api.post('/login', { email, password });
+    const { user: u, token } = res.data;
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(u));
+    setUser(u);
+    return u;
+  };
 
-    const login = async (email, password) => {
-        const response = await axios.post('/login', { email, password });
-        const { token, user } = response.data;
-        
-        localStorage.setItem('auth_token', token);
-        setUser(user);
-        return user;
-    };
+  const logout = async () => {
+    try { await api.post('/logout'); } catch {}
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
 
-    const logout = async () => {
-        try {
-            await axios.post('/logout');
-        } catch (error) {
-            console.error("Logout failed", error);
-        } finally {
-            localStorage.removeItem('auth_token');
-            setUser(null);
-        }
-    };
+  const hasRole = (...roles) => user && roles.includes(user.role?.slug);
 
-    return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
-            {children}
-        </AuthContext.Provider>
-    );
-};
+  return (
+    <AuthContext.Provider value={{ user, login, logout, loading, hasRole }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
 
 export const useAuth = () => useContext(AuthContext);
