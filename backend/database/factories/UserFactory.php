@@ -25,6 +25,13 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'role_id' => \Illuminate\Support\Facades\DB::table('roles')->where('slug', 'admin')->value('id')
+                ?? \Illuminate\Support\Facades\DB::table('roles')->insertGetId([
+                    'name' => 'Admin',
+                    'slug' => 'admin',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
