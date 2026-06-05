@@ -12,9 +12,41 @@ class InventoryItemController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        return response()->json(InventoryItem::with('category')->paginate(15));
+        $query = InventoryItem::with('category', 'stockLevels.location');
+
+        if ($request->filled('search')) {
+            $s = $request->search;
+            $query->where(function ($q) use ($s) {
+                $q->where('name', 'like', "%{$s}%")
+                  ->orWhere('sku', 'like', "%{$s}%")
+                  ->orWhere('barcode', 'like', "%{$s}%");
+            });
+        }
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+
+        if ($request->filled('stock_status')) {
+            $status = $request->stock_status;
+            if ($status === 'out') {
+                $query->whereDoesntHave('stockLevels', fn ($q) => $q->where('quantity', '>', 0));
+            } elseif ($status === 'low') {
+                $query->where('min_stock', '>', 0)
+                    ->whereIn('id', function ($q) {
+                        $q->select('inventory_item_id')
+                          ->from('stock_levels')
+                          ->groupBy('inventory_item_id')
+                          ->havingRaw('COALESCE(SUM(quantity), 0) <= (SELECT min_stock FROM inventory_items WHERE id = stock_levels.inventory_item_id)');
+                    });
+            } elseif ($status === 'available') {
+                $query->whereHas('stockLevels', fn ($q) => $q->where('quantity', '>', 0));
+            }
+        }
+
+        return response()->json($query->orderByDesc('id')->paginate(15));
     }
 
     /**
