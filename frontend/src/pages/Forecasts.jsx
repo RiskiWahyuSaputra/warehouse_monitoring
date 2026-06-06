@@ -37,6 +37,20 @@ export default function ForecastsPage() {
     setGenerating(false);
   };
 
+  const handleExport = async (format) => {
+    try {
+      const ts = new Date().toISOString().slice(0, 10);
+      const params = period ? { period } : {};
+      if (format === 'excel') {
+        await downloadFile('/api/export/forecasts/excel', `forecast_report_${ts}.csv`, params);
+      } else {
+        await downloadFile('/api/export/forecasts/pdf', `forecast_report_${ts}.html`, params);
+      }
+    } catch (err) {
+      alert('Export failed: ' + (err.message || 'Unknown error'));
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -44,7 +58,19 @@ export default function ForecastsPage() {
           <h1 className="text-2xl font-bold">Stock Forecasts</h1>
           <p className="text-gray-500">AI-powered stock requirement predictions</p>
         </div>
-        <div className="flex gap-2 items-center">
+        <div className="flex gap-2 items-center flex-wrap">
+          <button onClick={() => handleExport('excel')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Export as CSV">
+            <FileSpreadsheet size={14} className="text-green-600" />
+            CSV
+          </button>
+          <button onClick={() => handleExport('pdf')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Export as PDF-HTML">
+            <FileText size={14} className="text-red-500" />
+            PDF
+          </button>
           <select className="input w-auto" value={period} onChange={(e) => setPeriod(parseInt(e.target.value))}>
             <option value={7}>7 Days</option>
             <option value={14}>14 Days</option>
