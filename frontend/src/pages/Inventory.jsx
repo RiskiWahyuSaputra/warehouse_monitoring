@@ -82,6 +82,24 @@ export default function InventoryPage() {
 
   const isAdmin = hasRole('admin', 'manager');
 
+  const handleExport = async (format) => {
+    try {
+      const ts = new Date().toISOString().slice(0, 10);
+      const params = {};
+      if (categoryFilter) params.category_id = categoryFilter;
+      if (statusFilter) params.stock_status = statusFilter;
+      const queryString = new URLSearchParams(params).toString();
+
+      if (format === 'excel') {
+        await downloadFile('/api/export/stock/excel', `stock_report_${ts}.csv`, params);
+      } else {
+        await downloadFile('/api/export/stock/pdf', `stock_report_${ts}.html`, params);
+      }
+    } catch (err) {
+      alert('Export failed: ' + (err.message || 'Unknown error'));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
