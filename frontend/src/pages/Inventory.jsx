@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText, ScanBarcode, Printer, Eye } from 'lucide-react';
 
 export default function InventoryPage() {
   const { hasRole } = useAuth();
@@ -15,6 +15,7 @@ export default function InventoryPage() {
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
+  const [barcodeItem, setBarcodeItem] = useState(null);
 
   const [locations, setLocations] = useState([]);
 
@@ -160,6 +161,7 @@ export default function InventoryPage() {
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Stock</th>
                 <th className="text-right px-4 py-3 font-medium text-gray-600">Min</th>
                 <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600">Barcode</th>
                 {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
               </tr>
             </thead>
@@ -185,10 +187,25 @@ export default function InventoryPage() {
                     <td className="px-4 py-3">
                       {isOut ? <span className="badge-danger">Out</span> : isLow ? <span className="badge-warning">Low</span> : <span className="badge-success">OK</span>}
                     </td>
+                    <td className="px-4 py-3">
+                      {item.barcode ? (
+                        <button
+                          onClick={() => setBarcodeItem(item)}
+                          className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-mono"
+                          title="View barcode"
+                        >
+                          <ScanBarcode size={14} />
+                          <span className="hidden sm:inline">{item.barcode}</span>
+                          <span className="sm:hidden">View</span>
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-400">No barcode</span>
+                      )}
+                    </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => startEdit(item)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Edit2 size={14} /></button>
-                        <button onClick={() => handleDelete(item)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1"><Trash2 size={14} /></button>
+                        <button onClick={() => startEdit(item)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit"><Edit2 size={14} /></button>
+                        <button onClick={() => handleDelete(item)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete"><Trash2 size={14} /></button>
                       </td>
                     )}
                   </tr>
@@ -268,6 +285,47 @@ export default function InventoryPage() {
                 <button type="submit" className="btn-primary">{editing ? 'Update' : 'Create'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode modal */}
+      {barcodeItem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-md">
+            <div className="flex items-center justify-between p-4 border-b">
+              <h2 className="text-lg font-semibold">Barcode — {barcodeItem.name}</h2>
+              <button onClick={() => setBarcodeItem(null)} className="p-1 rounded hover:bg-gray-100"><X size={18} /></button>
+            </div>
+            <div className="p-6 text-center">
+              <p className="text-xs text-gray-500 mb-1">SKU: {barcodeItem.sku}</p>
+              <div className="bg-white border-2 border-dashed border-gray-200 rounded-lg p-4 mb-4">
+                <img
+                  src={`/api/inventory/items/${barcodeItem.id}/barcode/svg`}
+                  alt={`Barcode ${barcodeItem.barcode}`}
+                  className="mx-auto max-w-full h-20"
+                />
+                <p className="text-sm font-mono mt-2 tracking-wider">{barcodeItem.barcode || barcodeItem.sku}</p>
+              </div>
+              <div className="flex justify-center gap-2">
+                <a
+                  href={`/api/inventory/items/${barcodeItem.id}/barcode/print`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-primary gap-2"
+                >
+                  <Printer size={16} /> Print Label
+                </a>
+                <a
+                  href={`/api/inventory/items/${barcodeItem.id}/barcode/svg`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary gap-2"
+                >
+                  <Eye size={16} /> View SVG
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       )}
