@@ -102,14 +102,41 @@ export default function DashboardPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
           <p className="text-sm text-gray-500 mt-0.5">Warehouse monitoring overview</p>
         </div>
-        <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-          <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-          Live
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+            Live
+          </div>
+          <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+          <button onClick={() => handleExport('stock-excel')} disabled={!!exporting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Export Stock Report (CSV)">
+            <FileSpreadsheet size={14} className="text-green-600" />
+            Stock CSV
+          </button>
+          <button onClick={() => handleExport('stock-pdf')} disabled={!!exporting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Export Stock Report (PDF-HTML)">
+            <FileText size={14} className="text-red-500" />
+            Stock PDF
+          </button>
+          <button onClick={() => handleExport('movement-excel')} disabled={!!exporting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Export Movement Report (CSV)">
+            <FileSpreadsheet size={14} className="text-green-600" />
+            Move CSV
+          </button>
+          <button onClick={() => handleExport('forecast-excel')} disabled={!!exporting}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            title="Export Forecast Report (CSV)">
+            <FileSpreadsheet size={14} className="text-green-600" />
+            Forecast CSV
+          </button>
         </div>
       </div>
 
