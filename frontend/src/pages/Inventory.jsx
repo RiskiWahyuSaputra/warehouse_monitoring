@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Edit2, Trash2, X, Filter } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText } from 'lucide-react';
 
 export default function InventoryPage() {
   const { hasRole } = useAuth();
