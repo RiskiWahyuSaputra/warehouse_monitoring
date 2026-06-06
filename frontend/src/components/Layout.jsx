@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
-  Users, BarChart3, Settings, LogOut, Menu, X, Bell
+  Users, BarChart3, ScanBarcode, Settings, LogOut, Menu, X, Bell
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
