@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
-import { TrendingUp, AlertTriangle, RefreshCw } from 'lucide-react';
+import { TrendingUp, AlertTriangle, RefreshCw, FileSpreadsheet, FileText } from 'lucide-react';
 
 export default function ForecastsPage() {
   const { hasRole } = useAuth();
