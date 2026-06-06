@@ -10,6 +10,7 @@ import api from '../services/api';
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'staff'] },
   { to: '/inventory', icon: Package, label: 'Inventory', roles: ['admin', 'manager', 'staff'] },
+  { to: '/barcode', icon: ScanBarcode, label: 'Scanner', roles: ['admin', 'manager', 'staff'] },
   { to: '/movements', icon: ArrowRightLeft, label: 'Movements', roles: ['admin', 'manager', 'staff'] },
   { to: '/approvals', icon: ClipboardCheck, label: 'Approvals', roles: ['admin', 'manager', 'staff'] },
   { to: '/forecasts', icon: BarChart3, label: 'Forecasts', roles: ['admin', 'manager', 'staff'] },
