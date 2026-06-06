@@ -23,4 +23,29 @@ api.interceptors.response.use(
   }
 );
 
+// Download helper: fetches a file URL with auth token and triggers browser download
+export async function downloadFile(url, filename, params = {}) {
+  const token = localStorage.getItem('token');
+  const queryString = new URLSearchParams(params).toString();
+  const fullUrl = `${url}${queryString ? '?' + queryString : ''}`;
+
+  const response = await fetch(fullUrl, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Download failed: ${response.status}`);
+  }
+
+  const blob = await response.blob();
+  const blobUrl = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = blobUrl;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  window.URL.revokeObjectURL(blobUrl);
+}
+
 export default api;

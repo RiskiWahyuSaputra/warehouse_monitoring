@@ -63,7 +63,17 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('suppliers', SupplierController::class);
         Route::apiResource('inventory-items', InventoryItemController::class)->except(['index', 'show']);
         Route::post('/approvals/{approvalRequest}/decide', [ApprovalController::class, 'decide']);
-        Route::get('/export/stock', [ExportController::class, 'stockReport']);
+        Route::prefix('export')->group(function () {
+            Route::get('/stock', [ExportController::class, 'stockReport']);
+            Route::get('/stock/excel', [ExportController::class, 'stockExcel']);
+            Route::get('/stock/pdf', [ExportController::class, 'stockPdf']);
+            Route::get('/movements', [ExportController::class, 'movementReport']);
+            Route::get('/movements/excel', [ExportController::class, 'movementExcel']);
+            Route::get('/movements/pdf', [ExportController::class, 'movementPdf']);
+            Route::get('/forecasts', [ExportController::class, 'forecastReport']);
+            Route::get('/forecasts/excel', [ExportController::class, 'forecastExcel']);
+            Route::get('/forecasts/pdf', [ExportController::class, 'forecastPdf']);
+        });
         Route::apiResource('users', UserController::class);
         Route::get('audit-logs', [AuditLogController::class, 'index']);
         Route::get('audit-logs/{auditLog}', [AuditLogController::class, 'show']);
