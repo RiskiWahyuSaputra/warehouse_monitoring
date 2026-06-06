@@ -107,11 +107,25 @@ export default function InventoryPage() {
           <h1 className="text-2xl font-bold">Inventory</h1>
           <p className="text-gray-500">{meta.total || 0} items total</p>
         </div>
-        {isAdmin && (
-          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
-            <Plus size={16} /> Add Item
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => handleExport('excel')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Export as CSV">
+            <FileSpreadsheet size={14} className="text-green-600" />
+            CSV
           </button>
-        )}
+          <button onClick={() => handleExport('pdf')}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Export as PDF-HTML">
+            <FileText size={14} className="text-red-500" />
+            PDF
+          </button>
+          {isAdmin && (
+            <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
+              <Plus size={16} /> Add Item
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
