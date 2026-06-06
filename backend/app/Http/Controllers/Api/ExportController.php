@@ -6,15 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\InventoryItem;
 use App\Models\StockForecast;
 use App\Models\StockMovement;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Http\Response;
+use Carbon\Carbon;
 
 class ExportController extends Controller
 {
-    // ──────────────────────────────────────────────
-    // STOCK REPORTS
-    // ──────────────────────────────────────────────
+    // ── STOCK REPORTS ──────────────────────────────
 
     public function stockReport(Request $request)
     {
@@ -72,7 +69,7 @@ class ExportController extends Controller
             $item->stockLevels->map(fn($sl) => ($sl->location?->zone ?? '-') . '-' . ($sl->location?->rack ?? '-') . ':' . ($sl->location?->bin ?? '-') . ' = ' . $sl->quantity)->implode('; '),
         ]);
 
-        return $this->generateExcel('stock_report', $headers, $rows);
+        return $this->generateCsv('stock_report', $headers, $rows);
     }
 
     public function stockPdf(Request $request)
@@ -95,16 +92,14 @@ class ExportController extends Controller
             $item->stockLevels->map(fn($sl) => ($sl->location?->zone ?? '-') . '-' . ($sl->location?->rack ?? '-') . ':' . ($sl->location?->bin ?? '-') . ' = ' . $sl->quantity)->implode(', '),
         ]);
 
-        return $this->generatePdf($title, $headers, $rows, $generatedAt);
+        return $this->generateHtml($title, $headers, $rows, $generatedAt);
     }
 
-    // ──────────────────────────────────────────────
-    // MOVEMENT REPORTS
-    // ──────────────────────────────────────────────
+    // ── MOVEMENT REPORTS ───────────────────────────
 
     public function movementReport(Request $request)
     {
-        $query = StockMovement::with('item', 'location', 'supplier', 'user')
+        $query = StockMovement::with(['item', 'location', 'supplier', 'user'])
             ->when($request->filled('type'), fn($q) => $q->where('type', $request->type))
             ->when($request->filled('from_date'), fn($q) => $q->where('created_at', '>=', $request->from_date . ' 00:00:00'))
             ->when($request->filled('to_date'), fn($q) => $q->where('created_at', '<=', $request->to_date . ' 23:59:59'))
@@ -115,7 +110,7 @@ class ExportController extends Controller
 
     public function movementExcel(Request $request)
     {
-        $movements = StockMovement::with('item', 'location', 'supplier', 'user')
+        $movements = StockMovement::with(['item', 'location', 'supplier', 'user'])
             ->when($request->filled('type'), fn($q) => $q->where('type', $request->type))
             ->when($request->filled('from_date'), fn($q) => $q->where('created_at', '>=', $request->from_date . ' 00:00:00'))
             ->when($request->filled('to_date'), fn($q) => $q->where('created_at', '<=', $request->to_date . ' 23:59:59'))
@@ -123,24 +118,27 @@ class ExportController extends Controller
             ->get();
 
         $headers = ['Date', 'Item', 'SKU', 'Type', 'Quantity', 'Location', 'Supplier', 'User', 'Remarks'];
-        $rows = $movements->map(fn($m) => [
-            $m->created_at->format('Y-m-d H:i'),
-            $m->item?->name ?? '-',
-            $m->item?->sku ?? '-',
-            ucfirst($m->type),
-            $m->quantity,
-            $m->location ? ($m->location->zone . '-' . $m->location->rack . ':' . $m->location->bin) : '-',
-            $m->supplier?->name ?? '-',
-            $m->user?->name ?? '-',
-            $m->remarks ?? '-',
-        ]);
+        $rows = [];
+        foreach ($movements as $m) {
+            $rows[] = [
+                $m->created_at ? $m->created_at->format('Y-m-d H:i') : '-',
+                $m->item?->name ?? '-',
+                $m->item?->sku ?? '-',
+                ucfirst($m->type),
+                $m->quantity,
+                $m->location ? ($m->location->zone . '-' . $m->location->rack . ':' . $m->location->bin) : '-',
+                $m->supplier?->name ?? '-',
+                $m->user?->name ?? '-',
+                $m->remarks ?? '-',
+            ];
+        }
 
-        return $this->generateExcel('movement_report', $headers, $rows);
+        return $this->generateCsv('movement_report', $headers, $rows);
     }
 
     public function movementPdf(Request $request)
     {
-        $movements = StockMovement::with('item', 'location', 'supplier', 'user')
+        $movements = StockMovement::with(['item', 'location', 'supplier', 'user'])
             ->when($request->filled('type'), fn($q) => $q->where('type', $request->type))
             ->when($request->filled('from_date'), fn($q) => $q->where('created_at', '>=', $request->from_date . ' 00:00:00'))
             ->when($request->filled('to_date'), fn($q) => $q->where('created_at', '<=', $request->to_date . ' 23:59:59'))
@@ -150,21 +148,22 @@ class ExportController extends Controller
         $title = 'Movement Report';
         $generatedAt = Carbon::now()->format('d M Y H:i');
         $headers = ['Date', 'Item', 'Type', 'Qty', 'Location', 'User'];
-        $rows = $movements->map(fn($m) => [
-            $m->created_at->format('Y-m-d H:i'),
-            $m->item?->name ?? '-',
-            ucfirst($m->type),
-            $m->quantity,
-            $m->location ? ($m->location->zone . '-' . $m->location->rack . ':' . $m->location->bin) : '-',
-            $m->user?->name ?? '-',
-        ]);
+        $rows = [];
+        foreach ($movements as $m) {
+            $rows[] = [
+                $m->created_at ? $m->created_at->format('Y-m-d H:i') : '-',
+                $m->item?->name ?? '-',
+                ucfirst($m->type),
+                $m->quantity,
+                $m->location ? ($m->location->zone . '-' . $m->location->rack . ':' . $m->location->bin) : '-',
+                $m->user?->name ?? '-',
+            ];
+        }
 
-        return $this->generatePdf($title, $headers, $rows, $generatedAt);
+        return $this->generateHtml($title, $headers, $rows, $generatedAt);
     }
 
-    // ──────────────────────────────────────────────
-    // FORECAST REPORTS
-    // ──────────────────────────────────────────────
+    // ── FORECAST REPORTS ───────────────────────────
 
     public function forecastReport(Request $request)
     {
@@ -196,7 +195,7 @@ class ExportController extends Controller
             $f->target_date,
         ]);
 
-        return $this->generateExcel('forecast_report', $headers, $rows);
+        return $this->generateCsv('forecast_report', $headers, $rows);
     }
 
     public function forecastPdf(Request $request)
@@ -219,26 +218,19 @@ class ExportController extends Controller
             $f->target_date,
         ]);
 
-        return $this->generatePdf($title, $headers, $rows, $generatedAt);
+        return $this->generateHtml($title, $headers, $rows, $generatedAt);
     }
 
-    // ──────────────────────────────────────────────
-    // EXCEL GENERATOR (CSV-compatible)
-    // ──────────────────────────────────────────────
+    // ── CSV GENERATOR ──────────────────────────────
 
-    private function generateExcel(string $filename, array $headers, $rows)
+    private function generateCsv(string $filename, array $headers, $rows)
     {
         $filename = $filename . '_' . date('Y-m-d_His') . '.csv';
 
         $output = fopen('php://temp', 'r+');
-
-        // UTF-8 BOM for Excel compatibility
         fprintf($output, chr(0xEF) . chr(0xBB) . chr(0xBF));
-
-        // Headers
         fputcsv($output, $headers);
 
-        // Rows
         foreach ($rows as $row) {
             fputcsv($output, $row);
         }
@@ -254,62 +246,54 @@ class ExportController extends Controller
         ]);
     }
 
-    // ──────────────────────────────────────────────
-    // PDF GENERATOR (HTML-based)
-    // ──────────────────────────────────────────────
+    // ── HTML REPORT GENERATOR ──────────────────────
 
-    private function generatePdf(string $title, array $headers, $rows, string $generatedAt)
+    private function generateHtml(string $title, array $headers, $rows, string $generatedAt)
     {
-        $html = '<!DOCTYPE html><html><head><meta charset="utf-8">';
-        $html .= '<style>
-            @page { margin: 15mm; }
-            body { font-family: DejaVu Sans, Helvetica, Arial, sans-serif; font-size: 11px; color: #1f2937; margin: 0; padding: 0; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #2563eb; padding-bottom: 12px; }
-            .header h1 { font-size: 18px; color: #1e40af; margin: 0 0 4px 0; }
-            .header .meta { font-size: 10px; color: #6b7280; }
-            .header .meta span { margin: 0 8px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 12px; }
-            thead th { background: #2563eb; color: #fff; font-weight: 600; font-size: 10px; padding: 8px 6px; text-align: left; border: 1px solid #1d4ed8; }
-            tbody td { padding: 6px; border: 1px solid #e5e7eb; font-size: 10px; }
-            tbody tr:nth-child(even) { background: #f9fafb; }
-            .status-ok { color: #059669; font-weight: 600; }
-            .status-low { color: #d97706; font-weight: 600; }
-            .status-out { color: #dc2626; font-weight: 600; }
-            .footer { margin-top: 20px; text-align: center; font-size: 9px; color: #9ca3af; border-top: 1px solid #e5e7eb; padding-top: 8px; }
-        </style></head><body>';
-
-        $html .= '<div class="header">';
-        $html .= '<h1>' . htmlspecialchars($title) . '</h1>';
-        <div class="meta"><span>Generated: ' . htmlspecialchars($generatedAt) . '</span><span>Records: ' . count($rows) . '</span></div>';
-        $html .= '</div>';
-
-        $html .= '<table><thead><tr>';
-        foreach ($headers as $h) {
-            $html .= '<th>' . htmlspecialchars($h) . '</th>';
-        }
-        $html .= '</tr></thead><tbody>';
-
-        foreach ($rows as $row) {
-            $html .= '<tr>';
-            foreach ($row as $cell) {
-                $cellStr = (string) $cell;
-                // Color-code status cells
-                if (strtolower($cellStr) === 'out of stock') {
-                    $html .= '<td class="status-out">' . htmlspecialchars($cellStr) . '</td>';
-                } elseif (strtolower($cellStr) === 'low') {
-                    $html .= '<td class="status-low">' . htmlspecialchars($cellStr) . '</td>';
-                } elseif (strtolower($cellStr) === 'available') {
-                    $html .= '<td class="status-ok">' . htmlspecialchars($cellStr) . '</td>';
-                } else {
-                    $html .= '<td>' . htmlspecialchars($cellStr) . '</td>';
-                }
-            }
-            $html .= '</tr>';
-        }
-
-        $html .= '</tbody></table>';
-        $html .= '<div class="footer">Warehouse Monitoring System &mdash; ' . htmlspecialchars($title) . ' &mdash; ' . htmlspecialchars($generatedAt) . '</div>';
-        $html .= '</body></html>';
+        ob_start();
+        ?>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+body{font-family:Helvetica,Arial,sans-serif;font-size:11px;color:#1f2937;margin:20px}
+.header{text-align:center;margin-bottom:20px;border-bottom:2px solid #2563eb;padding-bottom:12px}
+.header h1{font-size:18px;color:#1e40af;margin:0 0 4px 0}
+.header .meta{font-size:10px;color:#6b7280}
+table{width:100%;border-collapse:collapse;margin-top:12px}
+thead th{background:#2563eb;color:#fff;font-weight:600;font-size:10px;padding:8px 6px;text-align:left;border:1px solid #1d4ed8}
+tbody td{padding:6px;border:1px solid #e5e7eb;font-size:10px}
+tbody tr:nth-child(even){background:#f9fafb}
+.footer{margin-top:20px;text-align:center;font-size:9px;color:#9ca3af;border-top:1px solid #e5e7eb;padding-top:8px}
+</style>
+</head>
+<body>
+<div class="header">
+<h1><?php echo htmlspecialchars($title); ?></h1>
+<div class="meta">Generated: <?php echo htmlspecialchars($generatedAt); ?> - Records: <?php echo count($rows); ?></div>
+</div>
+<table>
+<thead><tr>
+<?php foreach ($headers as $h): ?>
+<th><?php echo htmlspecialchars($h); ?></th>
+<?php endforeach; ?>
+</tr></thead>
+<tbody>
+<?php foreach ($rows as $row): ?>
+<tr>
+<?php foreach ($row as $cell): ?>
+<td><?php echo htmlspecialchars((string) $cell); ?></td>
+<?php endforeach; ?>
+</tr>
+<?php endforeach; ?>
+</tbody>
+</table>
+<div class="footer">Warehouse Monitoring System - <?php echo htmlspecialchars($title); ?> - <?php echo htmlspecialchars($generatedAt); ?></div>
+</body>
+</html>
+        <?php
+        $html = ob_get_clean();
 
         $filename = strtolower(str_replace(' ', '_', $title)) . '_' . date('Y-m-d_His') . '.html';
 
@@ -320,9 +304,7 @@ class ExportController extends Controller
         ]);
     }
 
-    // ──────────────────────────────────────────────
-    // HELPERS
-    // ──────────────────────────────────────────────
+    // ── HELPERS ────────────────────────────────────
 
     private function stockStatus(InventoryItem $item): string
     {
