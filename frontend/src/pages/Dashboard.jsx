@@ -41,6 +41,30 @@ export default function DashboardPage() {
   const [charts, setCharts] = useState(null);
   const [warnings, setWarnings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState('');
+
+  const handleExport = async (type) => {
+    setExporting(type);
+    try {
+      const ts = new Date().toISOString().slice(0, 10);
+      if (type === 'stock-excel') {
+        await downloadFile('/api/export/stock/excel', `stock_report_${ts}.csv`);
+      } else if (type === 'stock-pdf') {
+        await downloadFile('/api/export/stock/pdf', `stock_report_${ts}.html`);
+      } else if (type === 'movement-excel') {
+        await downloadFile('/api/export/movements/excel', `movement_report_${ts}.csv`);
+      } else if (type === 'movement-pdf') {
+        await downloadFile('/api/export/movements/pdf', `movement_report_${ts}.html`);
+      } else if (type === 'forecast-excel') {
+        await downloadFile('/api/export/forecasts/excel', `forecast_report_${ts}.csv`);
+      } else if (type === 'forecast-pdf') {
+        await downloadFile('/api/export/forecasts/pdf', `forecast_report_${ts}.html`);
+      }
+    } catch (err) {
+      alert('Export failed: ' + (err.message || 'Unknown error'));
+    }
+    setExporting('');
+  };
 
   useEffect(() => {
     const fetchData = async () => {
