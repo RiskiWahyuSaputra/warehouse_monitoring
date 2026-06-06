@@ -3,32 +3,36 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\BarcodeScan;
 use App\Models\InventoryItem;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
 
 class BarcodeController extends Controller
 {
     /**
      * GET /api/inventory/items/{inventoryItem}/barcode
-     * Generate barcode info for an item.
      */
-    public function generate(InventoryItem $inventoryItem)
+    public function generate(InventoryItem $inventoryItem): JsonResponse
     {
         return response()->json([
             'item'    => $inventoryItem->load('category', 'stockLevels.location'),
             'barcode' => $inventoryItem->barcode,
-            'url'     => url('/api/barcode/' . $inventoryItem->barcode),
+            'svg_url' => url('/api/inventory/items/' . $inventoryItem->id . '/barcode/svg'),
+            'print_url' => url('/api/inventory/items/' . $inventoryItem->id . '/barcode/print'),
         ]);
     }
 
     /**
      * GET /api/inventory/items/{inventoryItem}/barcode/svg
-     * Render barcode as SVG image for printing.
      */
     public function svg(InventoryItem $inventoryItem): Response
     {
         $code = $inventoryItem->barcode ?: $inventoryItem->sku;
-        $svg = $this->generateCode128Svg($code, $inventoryItem->name);
+        $svg = $this->buildCode128Svg($code);
 
         return response($svg, 200, [
             'Content-Type'  => 'image/svg+xml',
@@ -38,12 +42,10 @@ class BarcodeController extends Controller
 
     /**
      * GET /api/inventory/items/{inventoryItem}/barcode/print
-     * Render printable barcode label (HTML page).
      */
-    public function print(InventoryItem $inventoryItem): Response
+    public function printLabel(InventoryItem $inventoryItem): Response
     {
         $code = $inventoryItem->barcode ?: $inventoryItem->sku;
-        $svg = $this->generateCode128Svg($code, $inventoryItem->name);
 
         ob_start();
         ?>
@@ -54,12 +56,13 @@ class BarcodeController extends Controller
 <title>Barcode - <?php echo htmlspecialchars($inventoryItem->name); ?></title>
 <style>
 @page { size: 76mm 25mm; margin: 3mm; }
-body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; }
+body { margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; min-height: 100vh; background: #fff; font-family: Helvetica, Arial, sans-serif; }
 .label { width: 70mm; text-align: center; }
 .label .name { font-size: 9px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .label .sku { font-size: 7px; color: #666; margin-bottom: 3px; }
-.label svg { width: 100%; height: auto; max-height: 12mm; }
-.label .code-text { font-size: 8px; font-family: monospace; letter-spacing: 1px; margin-top: 1px; }
+.barcode-img { width: 100%; height: 12mm; margin-bottom: 1px; }
+.barcode-img svg { width: 100%; height: 100%; }
+.label .code-text { font-size: 8px; font-family: monospace; letter-spacing: 1px; }
 @media print { body { min-height: auto; } }
 </style>
 </head>
@@ -67,7 +70,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 <div class="label">
 <div class="name"><?php echo htmlspecialchars($inventoryItem->name); ?></div>
 <div class="sku">SKU: <?php echo htmlspecialchars($inventoryItem->sku); ?></div>
-<?php echo $svg; ?>
+<div class="barcode-img"><?php echo $this->buildCode128Svg($code); ?></div>
 <div class="code-text"><?php echo htmlspecialchars($code); ?></div>
 </div>
 </body>
@@ -78,11 +81,10 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 
     /**
      * POST /api/barcode/scan
-     * Scan a barcode and return the matching item.
      */
-    public function scan(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    public function scan(Request $request): JsonResponse
     {
-        $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+        $validator = Validator::make($request->all(), [
             'code'   => 'required|string|min:3|max:100',
             'action' => 'nullable|string|in:lookup,stock_in,stock_out',
         ]);
@@ -96,15 +98,13 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 
         $code   = trim($request->input('code'));
         $action = $request->input('action', 'lookup');
+        $format = $this->detectBarcodeFormat($code) ?: 'unknown';
 
-        $format = $this->detectBarcodeFormat($code);
-        if (!$format) $format = 'unknown';
-
+        // Lookup by barcode first, then SKU
         $item = InventoryItem::with(['category', 'stockLevels.location'])
             ->where('barcode', $code)
             ->first();
 
-        // Also try SKU if not found by barcode
         if (!$item) {
             $item = InventoryItem::with(['category', 'stockLevels.location'])
                 ->where('sku', $code)
@@ -113,7 +113,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 
         $found = $item !== null;
 
-        \App\Models\BarcodeScan::create([
+        BarcodeScan::create([
             'user_id'           => $request->user()->id,
             'inventory_item_id' => $item?->id,
             'scanned_code'      => $code,
@@ -146,7 +146,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
                 'unit'        => $item->unit,
                 'min_stock'   => $item->min_stock,
                 'total_stock' => $totalStock,
-                'status'      => $totalStock <= 0 ? 'Out of Stock' : ($item->min_stock > 0 && $totalStock <= $item->min_stock ? 'Low' : 'Available'),
+                'status'      => $this->stockStatus($item, $totalStock),
                 'category'    => $item->category?->name,
                 'locations'   => $item->stockLevels->map(fn($sl) => [
                     'zone'     => $sl->location?->zone,
@@ -160,11 +160,10 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 
     /**
      * GET /api/barcode/history
-     * Get scan history for current user.
      */
-    public function history(\Illuminate\Http\Request $request): \Illuminate\Http\JsonResponse
+    public function history(Request $request): JsonResponse
     {
-        $query = \App\Models\BarcodeScan::with(['inventoryItem:id,name,sku'])
+        $query = BarcodeScan::with(['inventoryItem:id,name,sku'])
             ->where('user_id', $request->user()->id)
             ->orderByDesc('created_at');
 
@@ -173,9 +172,8 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 
     /**
      * GET /api/barcode/lookup/{code}
-     * Quick lookup by barcode (GET alternative to POST scan).
      */
-    public function lookup(string $code): \Illuminate\Http\JsonResponse
+    public function lookup(string $code): JsonResponse
     {
         $item = InventoryItem::with(['category', 'stockLevels.location'])
             ->where('barcode', $code)
@@ -198,115 +196,20 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
                 'unit'        => $item->unit,
                 'min_stock'   => $item->min_stock,
                 'total_stock' => $totalStock,
-                'status'      => $totalStock <= 0 ? 'Out of Stock' : ($item->min_stock > 0 && $totalStock <= $item->min_stock ? 'Low' : 'Available'),
+                'status'      => $this->stockStatus($item, $totalStock),
                 'category'    => $item->category?->name,
             ],
         ]);
     }
 
-    // ── BARCODE SVG GENERATOR (Code 128) ───────────
+    // ── PRIVATE HELPERS ────────────────────────────
 
-    private function generateCode128Svg(string $code, string $label = ''): string
+    private function stockStatus(InventoryItem $item, int $totalStock): string
     {
-        // Code 128 character set B encoding
-        $charset = [
-            ' ', '!', '"', '#', '$', '%', '&', "'", '(', ')', '*', '+', ',', '-', '.', '/',
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', ';', '<', '=', '>', '?',
-            '@', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
-            'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '[', '\\', ']', '^', '_',
-            '`', 'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o',
-            'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '{', '|', '}', '~',
-        ];
-
-        // Code 128 patterns (B encoding): each char = 6 bars/spaces, 11 modules wide
-        $patterns = [];
-        for ($i = 0; $i < 107; $i++) {
-            $patterns[] = $this->getCode128Pattern($i);
-        }
-
-        // Build barcode data
-        $bars = [];
-
-        // Start code B (index 104)
-        $bars = array_merge($bars, $this->charToBars(104));
-
-        // Encode each character
-        $checksum = 104; // start code B
-        for ($i = 0; $i < strlen($code); $i++) {
-            $charIndex = array_search($code[$i], $charset);
-            if ($charIndex === false) $charIndex = 0; // fallback to space
-            $bars = array_merge($bars, $this->charToBars($charIndex));
-            $checksum += $charIndex * ($i + 1);
-        }
-
-        // Check character
-        $checkChar = $checksum % 103;
-        $bars = array_merge($bars, $this->charToBars($checkChar));
-
-        // Stop code
-        $bars = array_merge($bars, [1,1,0,1,0,0,1,1,0,1,1]);
-
-        // Render SVG
-        $barWidth = 1.5;
-        $height = 40;
-        $width = count($bars) * $barWidth + 20;
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $width . '" height="' . $height . '" viewBox="0 0 ' . $width . ' ' . $height . '">';
-        $svg .= '<rect width="100%" height="100%" fill="white"/>';
-
-        $x = 10;
-        foreach ($bars as $i => $bar) {
-            if ($i % 2 === 0 && $bar) {
-                $svg .= '<rect x="' . $x . '" y="2" width="' . $barWidth . '" height="' . ($height - 14) . '" fill="black"/>';
-            }
-            $x += $barWidth;
-        }
-
-        $svg .= '</svg>';
-
-        return $svg;
+        if ($totalStock <= 0) return 'Out of Stock';
+        if ($item->min_stock > 0 && $totalStock <= $item->min_stock) return 'Low';
+        return 'Available';
     }
-
-    private function charToBars(int $index): array
-    {
-        // Simplified Code 128 B encoding patterns
-        // Each pattern is 6 elements (bars/spaces), 11 modules total
-        $code128Patterns = [
-            [2,1,2,2,2,2], [2,2,2,1,2,2], [2,2,2,2,2,1], [1,2,1,2,2,3], [1,2,1,3,2,2],
-            [1,3,1,2,2,2], [1,2,2,2,1,3], [1,2,2,3,1,2], [1,3,2,2,1,2], [2,2,1,2,1,3],
-            [2,2,1,3,1,2], [2,3,1,2,1,2], [1,1,2,2,3,2], [1,2,2,1,3,2], [1,2,2,2,3,1],
-            [1,1,3,2,2,2], [1,2,3,1,2,2], [1,2,3,2,2,1], [2,2,3,2,1,1], [2,2,1,1,3,2],
-            [2,2,1,2,3,1], [2,1,3,2,1,2], [2,2,3,1,1,2], [3,1,2,1,3,1], [3,1,1,2,2,2],
-            [3,2,1,1,2,2], [3,2,1,2,2,1], [3,1,2,2,1,2], [3,2,2,1,1,2], [3,2,2,2,1,1],
-            [2,1,2,1,2,3], [2,1,2,3,2,1], [2,3,2,1,2,1], [1,1,1,3,2,3], [1,3,1,1,2,3],
-            [1,3,1,3,2,1], [1,1,2,3,1,3], [1,3,2,1,1,3], [1,3,2,3,1,1], [2,1,1,3,1,3],
-            [2,3,1,1,1,3], [2,3,1,3,1,1], [1,1,2,1,3,3], [1,1,2,3,3,1], [1,3,2,1,3,1],
-            [1,1,3,1,2,3], [1,1,3,3,2,1], [1,3,3,1,2,1], [3,1,3,1,2,1], [2,1,1,3,3,1],
-            [2,3,1,1,3,1], [2,1,3,1,1,3], [2,1,3,3,1,1], [2,1,3,1,3,1], [3,1,1,1,2,3],
-            [3,1,1,3,2,1], [3,3,1,1,2,1], [3,1,2,1,1,3], [3,1,2,3,1,1], [3,3,2,1,1,1],
-            [3,1,4,1,1,1], [2,2,1,4,1,1], [4,3,1,1,1,1], [1,1,1,2,2,4], [1,1,1,4,2,2],
-            [1,2,1,1,2,4], [1,2,1,4,2,1], [1,4,1,1,2,2], [1,4,1,2,2,1], [1,1,2,2,1,4],
-            [1,1,2,4,1,2], [1,2,2,1,1,4], [1,2,2,4,1,1], [1,4,2,1,1,2], [1,4,2,2,1,1],
-            [2,4,1,2,1,1], [2,2,1,1,1,4], [4,1,3,1,1,1], [2,4,1,1,1,2], [1,3,4,1,1,1],
-            [1,1,1,2,4,2], [1,2,1,1,4,2], [1,2,1,2,4,1], [1,1,4,2,1,2], [1,2,4,1,1,2],
-            [1,2,4,2,1,1], [4,1,1,2,1,2], [4,2,1,1,1,2], [4,2,1,2,1,1], [2,1,2,1,4,1],
-            [2,1,4,1,2,1], [4,1,2,1,2,1], [1,1,1,1,4,3], [1,1,1,3,4,1], [1,3,1,1,4,1],
-            [1,1,4,1,1,3], [1,1,4,3,1,1], [4,1,1,1,1,3], [4,1,1,3,1,1], [1,1,3,1,4,1],
-            [1,1,4,1,3,1], [3,1,1,1,4,1], [4,1,1,1,3,1], [2,1,1,4,1,2], [2,1,1,2,1,4],
-            [2,1,1,2,3,2], [2,3,3,1,1,1,2],
-        ];
-
-        if ($index >= 0 && $index < count($code128Patterns)) {
-            return $code128Patterns[$index];
-        }
-        return $code128Patterns[0];
-    }
-
-    private function getCode128Pattern(int $index): string
-    {
-        return '';
-    }
-
-    // ── HELPERS ────────────────────────────────────
 
     private function detectBarcodeFormat(string $code): ?string
     {
@@ -317,5 +220,90 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         if ($len >= 4 && $len <= 48 && preg_match('/^[A-Za-z0-9\-\.\/\+\s]+$/', $code)) return 'Code 128';
         if ($len > 20 || preg_match('/[a-zA-Z]/', $code)) return 'QR Code';
         return null;
+    }
+
+    /**
+     * Build a Code 128 SVG barcode.
+     */
+    private function buildCode128Svg(string $code): string
+    {
+        $code = (string) $code;
+        if ($code === '') $code = 'N/A';
+
+        // Code 128 B start = 104, stop = 106
+        $values = [104]; // Start B
+        for ($i = 0; $i < strlen($code); $i++) {
+            $char = ord($code[$i]);
+            if ($char >= 32 && $char <= 127) {
+                $values[] = $char - 32;
+            } else {
+                $values[] = 0; // space for unknown
+            }
+        }
+
+        // Checksum
+        $checksum = 104;
+        for ($i = 1; $i < count($values); $i++) {
+            $checksum += $values[$i] * $i;
+        }
+        $values[] = $checksum % 103;
+        $values[] = 106; // Stop
+
+        // Code 128 patterns (11 modules each, 6 bars/spaces)
+        $patterns = [
+            '11011001100','11001101100','11001100110','10010011000','10010001100',
+            '10001001100','10011001000','10011000100','10001100100','11001001000',
+            '11001000100','11000100100','10110011100','10011011100','10011001110',
+            '10111001100','10011101100','10011100110','11001110010','11001011100',
+            '11001001110','11011100100','11001110100','11101101110','11101001100',
+            '11100101100','11100100110','11101100100','11100110100','11100110010',
+            '11011011000','11011000110','11000110110','10100011000','10001011000',
+            '10001000110','10110001000','10001101000','10001100010','11010001000',
+            '11000101000','11000100010','10110111000','10110001110','10001101110',
+            '10111011000','10111000110','10001110110','11101110110','11010001110',
+            '11000101110','11011101000','11011100010','11011101110','11101011000',
+            '11101000110','11100010110','11101101000','11101100010','11100011010',
+            '11101111010','11001000010','11110001010','10100110000','10100001100',
+            '10010110000','10010000110','10000101100','10000100110','10110010000',
+            '10110000100','10011010000','10011000010','10000110100','10000110010',
+            '11000010010','11001010000','11110111010','11000010100','10001111010',
+            '10100111100','10010111100','10010011110','10111100100','10011110100',
+            '10011110010','11110100100','11110010100','11110010010','11011011110',
+            '11011110110','11110110110','10101111000','10100011110','10001011110',
+            '10111101000','10111100010','11110101000','11110100010','10111011110',
+            '10111101110','11101011110','11110101110','11010000100','11010010000',
+            '11010011100','1100011101011',
+        ];
+
+        // Build bar string
+        $bars = '';
+        foreach ($values as $v) {
+            if ($v >= 0 && $v < count($patterns)) {
+                $bars .= $patterns[$v];
+            }
+        }
+
+        // Quiet zone
+        $bars = '00000000000' . $bars . '00000000000';
+
+        // Render SVG
+        $barW = 1.5;
+        $h = 36;
+        $w = strlen($bars) * $barW;
+
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '">';
+        $svg .= '<rect width="100%" height="100%" fill="#fff"/>';
+
+        $x = 0;
+        for ($i = 0; $i < strlen($bars); $i++) {
+            if ($bars[$i] === '1') {
+                $svg .= '<rect x="' . $x . '" y="0" width="' . $barW . '" height="' . $h . '" fill="#000"/>';
+            }
+            $x += $barW;
+        }
+
+        $svg .= '</svg>';
+
+        return $svg;
     }
 }

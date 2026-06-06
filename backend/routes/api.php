@@ -42,6 +42,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/lookup/{code}', [BarcodeController::class, 'lookup']);
     });
     Route::get('/inventory/items/{inventoryItem}/barcode', [BarcodeController::class, 'generate']);
+    Route::get('/inventory/items/{inventoryItem}/barcode/svg', [BarcodeController::class, 'svg']);
+    Route::get('/inventory/items/{inventoryItem}/barcode/print', [BarcodeController::class, 'printLabel']);
 
     // Approvals — all authenticated users (scoped by role in controller)
     Route::get('/approvals', [ApprovalController::class, 'index']);
