@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\StockMovementController;
 use App\Http\Controllers\Api\SupplierController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\NotificationInAppController;
 use App\Http\Controllers\Api\RoleController;
+use App\Models\NotificationInApp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -44,6 +46,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/forecasts', [ForecastController::class, 'index']);
     Route::get('/forecasts/early-warnings', [ForecastController::class, 'earlyWarnings']);
     Route::get('/forecasts/{inventoryItem}', [ForecastController::class, 'show']);
+
+    // All authenticated users — notifications
+    Route::prefix('in-app-notifications')->group(function () {
+        Route::get('/', [NotificationInAppController::class, 'index']);
+        Route::get('/unread-count', [NotificationInAppController::class, 'unreadCount']);
+        Route::post('/read-all', [NotificationInAppController::class, 'markAllAsRead']);
+        Route::post('/{notification}/read', [NotificationInAppController::class, 'markAsRead']);
+    });
 
     // All authenticated users
     Route::get('/roles', [RoleController::class, 'index']);

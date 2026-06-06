@@ -8,13 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
-        // Drop the old Laravel default notifications table if exists
+        // Rename existing notifications table if it exists to in_app_notifications
         if (Schema::hasTable('notifications')) {
-            Schema::dropIfExists('notifications');
-        }
-
-        // Create our custom in_app_notifications table
-        if (!Schema::hasTable('in_app_notifications')) {
+            Schema::rename('notifications', 'in_app_notifications');
+        } elseif (!Schema::hasTable('in_app_notifications')) {
             Schema::create('in_app_notifications', function (Blueprint $table) {
                 $table->id();
                 $table->foreignId('user_id')->constrained()->cascadeOnDelete();
@@ -33,6 +30,8 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('in_app_notifications');
+        if (Schema::hasTable('in_app_notifications')) {
+            Schema::dropIfExists('in_app_notifications');
+        }
     }
 };

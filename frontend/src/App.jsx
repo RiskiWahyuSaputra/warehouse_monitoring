@@ -8,6 +8,7 @@ import MovementsPage from './pages/Movements';
 import ApprovalsPage from './pages/Approvals';
 import ForecastsPage from './pages/Forecasts';
 import UsersPage from './pages/Users';
+import NotificationsPage from './pages/Notifications';
 
 export default function App() {
   return (
@@ -21,6 +22,7 @@ export default function App() {
           <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
           <Route path="/forecasts" element={<ProtectedRoute><ForecastsPage /></ProtectedRoute>} />
           <Route path="/users" element={<ProtectedRoute roles={['admin', 'manager']}><UsersPage /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

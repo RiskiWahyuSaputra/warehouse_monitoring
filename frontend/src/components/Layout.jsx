@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
   Users, BarChart3, Settings, LogOut, Menu, X, Bell
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'staff'] },
@@ -12,6 +13,7 @@ const navItems = [
   { to: '/movements', icon: ArrowRightLeft, label: 'Movements', roles: ['admin', 'manager', 'staff'] },
   { to: '/approvals', icon: ClipboardCheck, label: 'Approvals', roles: ['admin', 'manager', 'staff'] },
   { to: '/forecasts', icon: BarChart3, label: 'Forecasts', roles: ['admin', 'manager', 'staff'] },
+  { to: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin', 'manager', 'staff'] },
   { to: '/users', icon: Users, label: 'Users', roles: ['admin', 'manager'] },
 ];
 
@@ -19,9 +21,24 @@ export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
 
   const handleLogout = () => { logout(); navigate('/login'); };
   const filteredNav = navItems.filter((item) => hasRole(...item.roles));
+
+  // Fetch unread notification count
+  useEffect(() => {
+    const fetchUnread = async () => {
+      try {
+        const res = await api.get('/in-app-notifications/unread-count');
+        setUnreadCount(res.data.unread_count || 0);
+      } catch {}
+    };
+    fetchUnread();
+    // Poll every 30 seconds
+    const interval = setInterval(fetchUnread, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -48,6 +65,11 @@ export default function Layout({ children }) {
             >
               <item.icon size={18} />
               {item.label}
+              {item.to === '/notifications' && unreadCount > 0 && (
+                <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </NavLink>
           ))}
         </nav>
@@ -61,9 +83,16 @@ export default function Layout({ children }) {
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-4 ml-auto">
-            <button className="p-2 rounded-lg hover:bg-gray-100 relative">
+            <button
+              onClick={() => navigate('/notifications')}
+              className="p-2 rounded-lg hover:bg-gray-100 relative"
+            >
               <Bell size={18} />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold px-1 py-0.5 rounded-full min-w-[16px] text-center">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
+              )}
             </button>
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-sm font-medium">
