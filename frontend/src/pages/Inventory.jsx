@@ -167,9 +167,9 @@ export default function InventoryPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr className="border-b"><td colSpan={isAdmin ? 8 : 7} className="text-center py-12 text-gray-400">Loading...</td></tr>
               ) : items.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">No items found</td></tr>
+                <tr className="border-b"><td colSpan={isAdmin ? 8 : 7} className="text-center py-12 text-gray-400">No items found</td></tr>
               ) : items.map((item) => {
                 const totalStock = item.stock_levels?.reduce((s, sl) => s + sl.quantity, 0) || 0;
                 const isLow = totalStock <= item.min_stock && item.min_stock > 0;
@@ -188,19 +188,15 @@ export default function InventoryPage() {
                       {isOut ? <span className="badge-danger">Out</span> : isLow ? <span className="badge-warning">Low</span> : <span className="badge-success">OK</span>}
                     </td>
                     <td className="px-4 py-3">
-                      {item.barcode ? (
-                        <button
-                          onClick={() => setBarcodeItem(item)}
-                          className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-mono"
-                          title="View barcode"
-                        >
-                          <ScanBarcode size={14} />
-                          <span className="hidden sm:inline">{item.barcode}</span>
-                          <span className="sm:hidden">View</span>
-                        </button>
-                      ) : (
-                        <span className="text-xs text-gray-400">No barcode</span>
-                      )}
+                      <button
+                        onClick={() => setBarcodeItem(item)}
+                        className="inline-flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 font-mono"
+                        title="View barcode"
+                      >
+                        <ScanBarcode size={14} />
+                        <span className="hidden sm:inline">{item.barcode || item.sku}</span>
+                        <span className="sm:hidden">{item.barcode ? 'BC' : 'SKU'}</span>
+                      </button>
                     </td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
@@ -289,40 +285,52 @@ export default function InventoryPage() {
         </div>
       )}
 
-      {/* Barcode modal */}
+      {/* Barcode / QR modal */}
       {barcodeItem && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="card w-full max-w-md">
+          <div className="card w-full max-w-md max-h-[90vh] overflow-auto">
             <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">Barcode — {barcodeItem.name}</h2>
+              <h2 className="text-lg font-semibold">{barcodeItem.name}</h2>
               <button onClick={() => setBarcodeItem(null)} className="p-1 rounded hover:bg-gray-100"><X size={18} /></button>
             </div>
-            <div className="p-6 text-center">
-              <p className="text-xs text-gray-500 mb-1">SKU: {barcodeItem.sku}</p>
-              <div className="bg-white border-2 border-dashed border-gray-200 rounded-lg p-4 mb-4">
+            <div className="p-6">
+              {/* Barcode section */}
+              <p className="text-xs text-gray-500 mb-1 font-medium">Barcode</p>
+              <div className="bg-white border-2 border-dashed border-gray-200 rounded-lg p-4 mb-4 text-center">
                 <img
                   src={`/api/inventory/items/${barcodeItem.id}/barcode/svg`}
-                  alt={`Barcode ${barcodeItem.barcode}`}
-                  className="mx-auto max-w-full h-20"
+                  alt={`Barcode ${barcodeItem.barcode || barcodeItem.sku}`}
+                  className="mx-auto max-w-full h-16"
+                  onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <p className="text-sm font-mono mt-2 tracking-wider">{barcodeItem.barcode || barcodeItem.sku}</p>
               </div>
-              <div className="flex justify-center gap-2">
-                <a
-                  href={`/api/inventory/items/${barcodeItem.id}/barcode/print`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-primary gap-2"
-                >
-                  <Printer size={16} /> Print Label
+              <div className="flex justify-center gap-2 mb-6">
+                <a href={`/api/inventory/items/${barcodeItem.id}/barcode/print`} target="_blank" rel="noopener noreferrer" className="btn-primary btn-sm gap-1.5">
+                  <Printer size={14} /> Print Barcode
                 </a>
-                <a
-                  href={`/api/inventory/items/${barcodeItem.id}/barcode/svg`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="btn-secondary gap-2"
-                >
-                  <Eye size={16} /> View SVG
+              </div>
+
+              {/* Divider */}
+              <div className="border-t border-gray-200 my-4"></div>
+
+              {/* QR Code section */}
+              <p className="text-xs text-gray-500 mb-1 font-medium">QR Code</p>
+              <div className="bg-white border-2 border-dashed border-gray-200 rounded-lg p-4 mb-4 text-center">
+                <img
+                  src={`/api/inventory/items/${barcodeItem.id}/qr-code`}
+                  alt={`QR Code ${barcodeItem.sku}`}
+                  className="mx-auto w-32 h-32"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                <p className="text-xs text-gray-400 mt-2">Scan to lookup item</p>
+              </div>
+              <div className="flex justify-center gap-2">
+                <a href={`/api/inventory/items/${barcodeItem.id}/qr-print`} target="_blank" rel="noopener noreferrer" className="btn-primary btn-sm gap-1.5">
+                  <Printer size={14} /> Print QR
+                </a>
+                <a href={`/api/inventory/items/${barcodeItem.id}/qr-code`} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm gap-1.5">
+                  <Eye size={14} /> View QR
                 </a>
               </div>
             </div>
