@@ -36,6 +36,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/inventory/transfer', [StockMovementController::class, 'transfer']);
 
     // Barcode — all authenticated users
+    Route::prefix('barcode')->group(function () {
+        Route::post('/scan', [BarcodeController::class, 'scan']);
+        Route::get('/history', [BarcodeController::class, 'history']);
+        Route::get('/lookup/{code}', [BarcodeController::class, 'lookup']);
+    });
     Route::get('/inventory/items/{inventoryItem}/barcode', [BarcodeController::class, 'generate']);
 
     // Approvals — all authenticated users (scoped by role in controller)
