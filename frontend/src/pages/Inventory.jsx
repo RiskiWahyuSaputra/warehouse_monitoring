@@ -101,6 +101,32 @@ export default function InventoryPage() {
     }
   };
 
+  const openPrintWindow = async (url) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(res.statusText);
+      const html = await res.text();
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(html); win.document.close(); }
+    } catch (err) {
+      alert('Failed to load: ' + err.message);
+    }
+  };
+
+  const openQrView = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/inventory/items/${id}/qr-code`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(res.statusText);
+      const svg = await res.text();
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(svg); win.document.close(); }
+    } catch (err) {
+      alert('Failed to load QR: ' + err.message);
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
