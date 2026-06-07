@@ -3,14 +3,14 @@ import api from '../services/api';
 import { Search, ScanBarcode, History, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, CameraOff, Zap, Upload } from 'lucide-react';
 import jsQR from 'jsqr';
 import Quagga from 'quagga';
+import { Html5Qrcode } from 'html5-qrcode';
 
 function decodeQuagga(canvas) {
   return new Promise((resolve) => {
-    const src = canvas.toDataURL('image/png');
     Quagga.decodeSingle({
       decoder: { readers: ['code_128_reader', 'ean_reader', 'ean_8_reader', 'upc_reader', 'code_39_reader', 'codabar_reader'] },
       locate: true,
-      src,
+      src: canvas,
     }, (result) => {
       if (result && result.codeResult) {
         resolve({ rawValue: result.codeResult.code, format: result.codeResult.format || 'code_128' });
@@ -177,29 +177,45 @@ export default function BarcodePage() {
     setError('');
     setResult(null);
     try {
+      // Primary: html5-qrcode (uses ZXing, supports 1D + QR)
+      const scanner = new Html5Qrcode('upload-scanner');
+      const text = await scanner.scanFile(file, false);
+      scanner.clear();
+      if (text) {
+        setCode(text);
+        handleCameraScan(text);
+        setLoading(false);
+        e.target.value = '';
+        return;
+      }
+    } catch {}
+
+    // Fallback: decode from canvas via quagga + jsQR
+    try {
       const img = new Image();
       img.src = URL.createObjectURL(file);
       await img.decode();
       const canvas = document.createElement('canvas');
       let { width, height } = img;
-      const maxDim = 2000;
-      if (width > maxDim || height > maxDim) {
-        const scale = maxDim / Math.max(width, height);
+      if (width > 2000 || height > 2000) {
+        const scale = 2000 / Math.max(width, height);
         width = Math.round(width * scale);
         height = Math.round(height * scale);
       }
       canvas.width = width;
       canvas.height = height;
-      const ctx = canvas.getContext('2d');
-      ctx.drawImage(img, 0, 0, width, height);
-      const barcode = await detectBarcode(canvas, 1);
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
       URL.revokeObjectURL(img.src);
+
+      const barcode = await detectBarcode(canvas, 0);
       if (barcode && barcode.rawValue) {
         setCode(barcode.rawValue);
-        handleCameraScan(barcode.rawValue);
-      } else {
-        setError('No barcode detected in the image. Try a clearer photo.');
+        await handleCameraScan(barcode.rawValue);
+        setLoading(false);
+        e.target.value = '';
+        return;
       }
+      setError('No barcode detected in the image. Try a clearer photo.');
     } catch (err) {
       setError('Failed to process image: ' + err.message);
     }
@@ -280,6 +296,7 @@ export default function BarcodePage() {
 
       {/* Scan area */}
       <div className="card p-6">
+        <div id="upload-scanner" className="hidden"></div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
