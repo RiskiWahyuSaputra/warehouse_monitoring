@@ -14,7 +14,9 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        return response()->json(Category::with('parent')->get());
+        return response()->json(
+            Category::with('parent')->withCount('items')->get()
+        );
     }
 
     /**

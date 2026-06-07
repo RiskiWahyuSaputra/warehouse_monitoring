@@ -10,4 +10,9 @@ class Location extends Model
     use HasFactory;
 
     protected $fillable = ['zone', 'rack', 'bin', 'capacity'];
+
+    public function stockLevels()
+    {
+        return $this->hasMany(StockLevel::class);
+    }
 }

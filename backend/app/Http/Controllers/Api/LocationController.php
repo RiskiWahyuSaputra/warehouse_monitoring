@@ -14,7 +14,9 @@ class LocationController extends Controller
      */
     public function index()
     {
-        return response()->json(Location::all());
+        return response()->json(
+            Location::withSum('stockLevels as current_stock', 'quantity')->get()
+        );
     }
 
     /**

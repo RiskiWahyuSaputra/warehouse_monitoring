@@ -2,7 +2,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
-  Users, BarChart3, ScanBarcode, Settings, LogOut, Menu, X, Bell
+  Users, BarChart3, ScanBarcode, Settings, LogOut, Menu, X, Bell, Tag, MapPin, Warehouse, Truck, FileText, Shield
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
@@ -10,11 +10,15 @@ import api from '../services/api';
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'staff'] },
   { to: '/inventory', icon: Package, label: 'Inventory', roles: ['admin', 'manager', 'staff'] },
+  { to: '/categories', icon: Tag, label: 'Categories', roles: ['admin', 'manager', 'staff'] },
+  { to: '/locations', icon: MapPin, label: 'Locations', roles: ['admin', 'manager', 'staff'] },
+  { to: '/suppliers', icon: Truck, label: 'Suppliers', roles: ['admin', 'manager', 'staff'] },
   { to: '/barcode', icon: ScanBarcode, label: 'Scanner', roles: ['admin', 'manager', 'staff'] },
   { to: '/movements', icon: ArrowRightLeft, label: 'Movements', roles: ['admin', 'manager', 'staff'] },
   { to: '/approvals', icon: ClipboardCheck, label: 'Approvals', roles: ['admin', 'manager', 'staff'] },
   { to: '/forecasts', icon: BarChart3, label: 'Forecasts', roles: ['admin', 'manager', 'staff'] },
   { to: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin', 'manager', 'staff'] },
+  { to: '/audit-logs', icon: FileText, label: 'Audit Logs', roles: ['admin', 'manager'] },
   { to: '/users', icon: Users, label: 'Users', roles: ['admin', 'manager'] },
 ];
 
