@@ -216,7 +216,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         $qrCode = new \Endroid\QrCode\QrCode(
             data: $data,
             errorCorrectionLevel: \Endroid\QrCode\ErrorCorrectionLevel::High,
-            size: 300,
+            size: 400,
             margin: 10,
             roundBlockSizeMode: \Endroid\QrCode\RoundBlockSizeMode::Margin,
         );
@@ -224,6 +224,9 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         $writer = new \Endroid\QrCode\Writer\SvgWriter();
         $result = $writer->write($qrCode);
         $svg = $result->getString();
+
+        // Strip XML declaration for cleaner <img> embedding
+        $svg = preg_replace('/<\?xml[^?]*\?>\s*/', '', $svg);
 
         return response($svg, 200, [
             'Content-Type'  => 'image/svg+xml',
@@ -242,7 +245,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         $qrCode = new \Endroid\QrCode\QrCode(
             data: $data,
             errorCorrectionLevel: \Endroid\QrCode\ErrorCorrectionLevel::High,
-            size: 300,
+            size: 400,
             margin: 10,
             roundBlockSizeMode: \Endroid\QrCode\RoundBlockSizeMode::Margin,
         );
@@ -250,6 +253,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         $writer = new \Endroid\QrCode\Writer\SvgWriter();
         $result = $writer->write($qrCode);
         $svg = $result->getString();
+        // Keep XML declaration for standalone print page — it's valid HTML5 inside the print template
 
         ob_start();
         ?>

@@ -1,14 +1,20 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
-import { Search, ScanBarcode, History, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, CameraOff, Zap, Upload } from 'lucide-react';
+import { Search, ScanBarcode, History, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, CameraOff, Zap, Upload, ImageIcon } from 'lucide-react';
 import jsQR from 'jsqr';
 import Quagga from 'quagga';
 import { Html5Qrcode } from 'html5-qrcode';
 
+// ── Quagga 1D barcode decoder ──────────────────────
 function decodeQuagga(canvas) {
   return new Promise((resolve) => {
     Quagga.decodeSingle({
-      decoder: { readers: ['code_128_reader', 'ean_reader', 'ean_8_reader', 'upc_reader', 'code_39_reader', 'codabar_reader'] },
+      decoder: {
+        readers: [
+          'code_128_reader', 'ean_reader', 'ean_8_reader',
+          'upc_reader', 'code_39_reader', 'codabar_reader',
+        ],
+      },
       locate: true,
       src: canvas,
     }, (result) => {
@@ -21,21 +27,52 @@ function decodeQuagga(canvas) {
   });
 }
 
+// ── jsQR decoder with multiple inversion attempts ──
+function decodeJsQR(canvas) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+  // Try normal first, then inverted
+  for (const inversion of ['dontInvert', 'onlyInvert', 'attemptBoth']) {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: inversion,
+    });
+    if (code && code.data) {
+      return { rawValue: code.data, format: 'qr_code' };
+    }
+  }
+  return null;
+}
+
+// ── BarcodeDetector API (Chrome/Edge) ─────────────
+async function detectWithBarcodeDetector(canvas) {
+  if (!('BarcodeDetector' in window)) return null;
+  try {
+    const supported = await BarcodeDetector.getSupportedFormats();
+    const formats = supported.filter((f) =>
+      ['qr_code', 'code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'codabar'].includes(f)
+    );
+    if (formats.length === 0) return null;
+    const detector = new BarcodeDetector({ formats });
+    const barcodes = await detector.detect(canvas);
+    if (barcodes.length > 0) return barcodes[0];
+  } catch {}
+  return null;
+}
+
+// ── Combined detector for camera frames ────────────
 async function detectBarcode(canvas, frameCount = 0) {
-  // 1. Native BarcodeDetector API (fast, supported in Chrome/Edge)
-  if ('BarcodeDetector' in window) {
-    try {
-      const supported = await BarcodeDetector.getSupportedFormats();
-      const formats = supported.filter((f) => ['qr_code', 'code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'codabar'].includes(f));
-      if (formats.length > 0) {
-        const detector = new BarcodeDetector({ formats });
-        const barcodes = await detector.detect(canvas);
-        if (barcodes.length > 0) return barcodes[0];
-      }
-    } catch {}
+  // 1. Native BarcodeDetector API (fastest, Chrome/Edge only)
+  const bdResult = await detectWithBarcodeDetector(canvas);
+  if (bdResult && bdResult.rawValue) return bdResult;
+
+  // 2. jsQR for QR codes (every 2nd frame for responsiveness)
+  if (frameCount % 2 === 0) {
+    const qrResult = decodeJsQR(canvas);
+    if (qrResult) return qrResult;
   }
 
-  // 2. Quagga for 1D barcodes (throttled to every 5th frame)
+  // 3. Quagga for 1D barcodes (every 5th frame, slower)
   if (frameCount % 5 === 0) {
     try {
       const result = await decodeQuagga(canvas);
@@ -43,43 +80,35 @@ async function detectBarcode(canvas, frameCount = 0) {
     } catch {}
   }
 
-  // 3. jsQR fallback for QR codes
-  if (frameCount % 3 === 0) {
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
-    if (code) return { rawValue: code.data, format: 'qr_code' };
-  }
-
   return null;
 }
 
-// Decode barcode from an image file using multiple strategies
+// ── Decode barcode/QR from an uploaded image file ──
 async function decodeImageFile(file) {
-  // Strategy 1: html5-qrcode (ZXing-based, supports 1D + QR)
+  // Strategy 1: html5-qrcode (ZXing-based, supports 1D + QR, most robust)
   try {
-    const scanner = new Html5Qrcode('upload-scanner', {
-      formatsToSupport: undefined,
-      verbose: false,
-    });
-    const text = await scanner.scanFile(file, false);
-    await scanner.clear();
-    if (text) return text;
+    const scanner = new Html5Qrcode('upload-scanner', { verbose: false });
+    const text = await scanner.scanFile(file, /* showImage= */ false);
+    try { await scanner.clear(); } catch {}
+    if (text) {
+      console.log('[decodeImageFile] html5-qrcode success:', text);
+      return text;
+    }
   } catch (err) {
-    console.warn('html5-qrcode failed:', err);
+    console.warn('[decodeImageFile] html5-qrcode failed:', err.message || err);
     try { const s = new Html5Qrcode('upload-scanner'); await s.clear(); } catch {}
   }
 
-  // Strategy 2: Draw to canvas and try jsQR + Quagga
+  // Strategy 2: Draw to canvas and try jsQR + Quagga + BarcodeDetector
   try {
     const img = new Image();
     img.src = URL.createObjectURL(file);
     await img.decode();
 
+    // Use a reasonable size — not too small (can't decode) not too large (slow)
     const canvas = document.createElement('canvas');
     let { width, height } = img;
-    // Limit size for performance but keep enough resolution for scanning
-    const maxDim = 1200;
+    const maxDim = 800;
     if (width > maxDim || height > maxDim) {
       const scale = maxDim / Math.max(width, height);
       width = Math.round(width * scale);
@@ -91,36 +120,48 @@ async function decodeImageFile(file) {
     ctx.drawImage(img, 0, 0, width, height);
     URL.revokeObjectURL(img.src);
 
-    // Try jsQR first (QR codes)
+    // 2a. jsQR (QR codes) — tries normal + inverted
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const qrCode = jsQR(imageData.data, imageData.width, imageData.height, {
-      inversionAttempts: 'dontInvert',
-    });
-    if (qrCode && qrCode.data) return qrCode.data;
+    for (const inversion of ['dontInvert', 'onlyInvert', 'attemptBoth']) {
+      const code = jsQR(imageData.data, imageData.width, imageData.height, {
+        inversionAttempts: inversion,
+      });
+      if (code && code.data) {
+        console.log('[decodeImageFile] jsQR success (inversion:', inversion, '):', code.data);
+        return code.data;
+      }
+    }
 
-    // Try Quagga (1D barcodes)
+    // 2b. Quagga (1D barcodes)
     const quaggaResult = await decodeQuagga(canvas);
-    if (quaggaResult) return quaggaResult.rawValue;
+    if (quaggaResult) {
+      console.log('[decodeImageFile] Quagga success:', quaggaResult.rawValue);
+      return quaggaResult.rawValue;
+    }
 
-    // Try BarcodeDetector API if available
+    // 2c. BarcodeDetector API
     if ('BarcodeDetector' in window) {
       try {
         const detector = new BarcodeDetector({
           formats: ['qr_code', 'code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'codabar'],
         });
         const barcodes = await detector.detect(canvas);
-        if (barcodes.length > 0 && barcodes[0].rawValue) return barcodes[0].rawValue;
+        if (barcodes.length > 0 && barcodes[0].rawValue) {
+          console.log('[decodeImageFile] BarcodeDetector success:', barcodes[0].rawValue);
+          return barcodes[0].rawValue;
+        }
       } catch {}
     }
   } catch (err) {
-    console.error('Canvas decode failed:', err);
+    console.error('[decodeImageFile] Canvas decode failed:', err);
   }
 
   return null;
 }
 
+// ── Component ──────────────────────────────────────
 export default function BarcodePage() {
-  const [mode, setMode] = useState('manual'); // manual, camera, upload
+  const [mode, setMode] = useState('manual');
   const [code, setCode] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -129,12 +170,16 @@ export default function BarcodePage() {
   const [showHistory, setShowHistory] = useState(false);
   const inputRef = useRef(null);
 
-  // Camera state
+  // Camera refs
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const animFrameRef = useRef(null);
   const scanningRef = useRef(false);
+  const frameCount = useRef(0);
+  const lastScannedCode = useRef(null);
+  const lastScanTime = useRef(0);
+
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState('');
   const [scanning, setScanning] = useState(false);
@@ -152,6 +197,7 @@ export default function BarcodePage() {
     return () => stopCamera();
   }, [mode]);
 
+  // ── Camera control ──────────────────────────────
   const startCamera = async () => {
     setCameraError('');
     setScanning(false);
@@ -167,6 +213,7 @@ export default function BarcodePage() {
           setCameraActive(true);
           setScanning(true);
           scanningRef.current = true;
+          frameCount.current = 0;
           requestAnimationFrame(tick);
         };
       }
@@ -191,15 +238,11 @@ export default function BarcodePage() {
     if (videoRef.current) videoRef.current.srcObject = null;
   };
 
-  const frameCount = useRef(0);
-  const lastScannedCode = useRef(null);
-  const lastScanTime = useRef(0);
-
-  const tick = useCallback(async () => {
-    if (!scanningRef.current || !videoRef.current || !canvasRef.current || videoRef.current.readyState !== 4) {
-      if (scanningRef.current) {
-        animFrameRef.current = requestAnimationFrame(tick);
-      }
+  // ── Camera scan loop ────────────────────────────
+  const tick = async () => {
+    if (!scanningRef.current) return;
+    if (!videoRef.current || !canvasRef.current || videoRef.current.readyState !== 4) {
+      animFrameRef.current = requestAnimationFrame(tick);
       return;
     }
 
@@ -215,8 +258,8 @@ export default function BarcodePage() {
     const barcode = await detectBarcode(canvas, frameCount.current);
 
     if (barcode && barcode.rawValue) {
-      // Debounce: ignore same code within 3 seconds
       const now = Date.now();
+      // Debounce: ignore same code within 3 seconds
       if (barcode.rawValue === lastScannedCode.current && now - lastScanTime.current < 3000) {
         animFrameRef.current = requestAnimationFrame(tick);
         return;
@@ -233,9 +276,9 @@ export default function BarcodePage() {
     }
 
     animFrameRef.current = requestAnimationFrame(tick);
-  }, []);
+  };
 
-  // Core lookup function — used by manual, camera, and upload
+  // ── Core lookup ─────────────────────────────────
   const handleLookup = async (codeToLookup) => {
     setLoading(true);
     setError('');
@@ -254,6 +297,7 @@ export default function BarcodePage() {
     setLoading(false);
   };
 
+  // ── Upload image ────────────────────────────────
   const handleUploadImage = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -263,16 +307,18 @@ export default function BarcodePage() {
     setError('');
     setResult(null);
 
+    console.log('[handleUploadImage] file:', file.name, file.type, file.size);
+
     try {
       const decodedText = await decodeImageFile(file);
       if (decodedText) {
         setCode(decodedText);
         await handleLookup(decodedText);
       } else {
-        setError('No barcode or QR code detected in the image. Try a clearer photo with better lighting.');
+        setError('No barcode or QR code detected. Make sure the image is clear, well-lit, and the code fills most of the frame.');
       }
     } catch (err) {
-      console.error('Upload processing failed:', err);
+      console.error('[handleUploadImage] failed:', err);
       setError('Failed to process image: ' + (err.message || 'Unknown error'));
     }
 
@@ -280,6 +326,7 @@ export default function BarcodePage() {
     e.target.value = '';
   };
 
+  // ── Manual entry ────────────────────────────────
   const handleManualScan = (e) => {
     e?.preventDefault();
     if (!code.trim()) return;
@@ -288,6 +335,7 @@ export default function BarcodePage() {
     handleLookup(codeToScan);
   };
 
+  // ── History ─────────────────────────────────────
   const fetchHistory = async () => {
     try {
       const res = await api.get('/barcode/history');
@@ -304,8 +352,8 @@ export default function BarcodePage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
-      {/* Hidden element for html5-qrcode — must be in DOM with valid dimensions */}
-      <div id="upload-scanner" style={{ position: 'absolute', width: '320px', height: '240px', visibility: 'hidden', pointerEvents: 'none' }}></div>
+      {/* Hidden element for html5-qrcode — must be in DOM */}
+      <div id="upload-scanner" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', visibility: 'hidden' }}></div>
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -407,13 +455,12 @@ export default function BarcodePage() {
                   muted
                 />
                 <canvas ref={canvasRef} className="hidden" />
-                {/* Scanning overlay */}
                 {scanning && (
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="w-56 h-40 border-2 border-white/60 rounded-2xl relative">
                       <div className="absolute inset-x-0 top-1/2 h-0.5 bg-red-500 animate-pulse" />
                       <div className="absolute -top-8 left-1/2 -translate-x-1/2 text-white text-xs bg-black/60 px-2 py-1 rounded whitespace-nowrap">
-                        Align barcode within frame
+                        Align barcode / QR code within frame
                       </div>
                     </div>
                   </div>
@@ -428,8 +475,8 @@ export default function BarcodePage() {
           </div>
         )}
 
-        {/* Upload mode — show loading state */}
-        {mode === 'upload' && loading && !result && (
+        {/* Upload mode — loading state */}
+        {mode === 'upload' && loading && !result && !error && (
           <div className="text-center py-8 text-gray-500">
             <div className="animate-spin w-8 h-8 border-2 border-primary-500 border-t-transparent rounded-full mx-auto mb-3"></div>
             <p className="text-sm">Analyzing image...</p>
@@ -446,7 +493,7 @@ export default function BarcodePage() {
                 <input
                   ref={inputRef}
                   className="input pl-10 text-lg font-mono tracking-wider"
-                  placeholder="Type barcode and press Enter..."
+                  placeholder="Type barcode or SKU and press Enter..."
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   autoComplete="off"
@@ -454,7 +501,7 @@ export default function BarcodePage() {
                 />
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
-                Tip: Connect a USB barcode scanner and type the code, or enter manually and press Enter
+                Tip: Connect a USB barcode scanner, or type the code / SKU manually and press Enter
               </p>
             </div>
             <button type="submit" disabled={loading || !code.trim()} className="btn-primary gap-2">
@@ -468,9 +515,12 @@ export default function BarcodePage() {
       {/* Error */}
       {error && (
         <div className="card p-4 border-l-4 border-l-red-500 bg-red-50">
-          <div className="flex items-center gap-2 text-red-700">
-            <XCircle size={16} />
-            <p className="text-sm font-medium">{error}</p>
+          <div className="flex items-start gap-2 text-red-700">
+            <XCircle size={16} className="mt-0.5 shrink-0" />
+            <div>
+              <p className="text-sm font-medium">{error}</p>
+              <p className="text-xs text-red-500 mt-1">Try typing the code manually if scan keeps failing.</p>
+            </div>
           </div>
         </div>
       )}
@@ -482,7 +532,7 @@ export default function BarcodePage() {
             <div className="p-2 rounded-lg bg-green-50 text-green-600">
               <CheckCircle size={20} />
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 className="font-semibold text-green-800">{result.item.name}</h3>
               <p className="text-xs text-gray-500 mt-0.5">
                 SKU: {result.item.sku} &middot; Barcode: {result.code || result.item.barcode} &middot; Format: {result.format}
@@ -553,7 +603,7 @@ export default function BarcodePage() {
             <div>
               <h3 className="font-semibold text-yellow-800">Item Not Found</h3>
               <p className="text-sm text-gray-600 mt-1">
-                Barcode <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">{result.code}</code> ({result.format}) is not registered in the system.
+                Code <code className="bg-gray-100 px-1.5 py-0.5 rounded text-xs font-mono">{result.code}</code> ({result.format}) is not registered in the system.
               </p>
               <p className="text-xs text-gray-400 mt-2">{result.hint}</p>
               <a href="/inventory" className="inline-flex items-center gap-1 mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium">
