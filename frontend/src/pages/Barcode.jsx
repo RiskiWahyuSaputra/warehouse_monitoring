@@ -233,7 +233,18 @@ export default function BarcodePage() {
     <div className="space-y-6 max-w-3xl mx-auto">
       {/* Hidden elements for scanners */}
       <div id="upload-scanner" style={{ position: 'absolute', width: '1px', height: '1px', overflow: 'hidden', visibility: 'hidden' }}></div>
-      <div id="camera-scanner" style={{ display: mode === 'camera' ? 'block' : 'none' }}></div>
+
+      {/* Camera scanner container — responsive sizing */}
+      {mode === 'camera' && (
+        <div className="card p-4">
+          <div id="camera-scanner" className="camera-scanner-wrapper"></div>
+          {scanning && !result && !error && (
+            <div className="mt-3 text-center">
+              <p className="text-xs text-gray-400">Point camera at barcode or QR code</p>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Header */}
       <div className="flex items-center justify-between">
@@ -284,23 +295,23 @@ export default function BarcodePage() {
       )}
 
       {/* Scan area */}
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-2">
+      <div className="card p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={() => { setMode('manual'); setResult(null); setError(''); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border ${mode === 'manual' ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
             >
-              <Keyboard size={14} /> Manual
+              <Keyboard size={14} /> <span className="hidden min-[400px]:inline">Manual</span>
             </button>
             <button
               onClick={() => { setMode('camera'); setResult(null); setError(''); }}
               className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border ${mode === 'camera' ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}
             >
-              <Camera size={14} /> Camera
+              <Camera size={14} /> <span className="hidden min-[400px]:inline">Camera</span>
             </button>
             <label className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border cursor-pointer ${mode === 'upload' ? 'bg-primary-50 border-primary-200 text-primary-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-              <Upload size={14} /> Upload
+              <Upload size={14} /> <span className="hidden min-[400px]:inline">Upload</span>
               <input type="file" accept="image/*" className="hidden" onChange={handleUploadImage} />
             </label>
           </div>
@@ -313,28 +324,6 @@ export default function BarcodePage() {
             </button>
           )}
         </div>
-
-        {/* Camera mode — Html5Qrcode renders its own video element */}
-        {mode === 'camera' && (
-          <div className="mb-4">
-            {cameraError ? (
-              <div className="text-center py-8 text-red-500">
-                <CameraOff size={32} className="mx-auto mb-2" />
-                <p className="text-sm">{cameraError}</p>
-                <button onClick={startCamera} className="btn-secondary btn-sm mt-3 gap-1.5">
-                  <Zap size={14} /> Retry
-                </button>
-              </div>
-            ) : (
-              <div className="text-center">
-                <p className="text-xs text-gray-400 mb-2">Camera active — point at a barcode or QR code</p>
-                {scanning && !result && !error && (
-                  <div className="text-sm text-gray-500 mt-2">Scanning...</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Upload mode — loading state */}
         {mode === 'upload' && loading && !result && !error && (

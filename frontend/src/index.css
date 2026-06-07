@@ -48,4 +48,39 @@
   .badge-info {
     @apply badge bg-blue-100 text-blue-800;
   }
+
+  /* Camera scanner responsive sizing */
+  .camera-scanner-wrapper {
+    @apply w-full overflow-hidden rounded-lg bg-black;
+    max-width: 320px;
+    margin: 0 auto;
+  }
+  .camera-scanner-wrapper video {
+    @apply w-full h-auto rounded-lg;
+    max-height: 240px;
+    object-fit: cover;
+  }
+  .camera-scanner-wrapper canvas {
+    @apply hidden;
+  }
+}
+
+/* Larger camera on bigger screens */
+@media (min-width: 640px) {
+  .camera-scanner-wrapper {
+    max-width: 400px;
+  }
+  .camera-scanner-wrapper video {
+    max-height: 300px;
+  }
+}
+
+/* Full width camera on mobile for better UX */
+@media (max-width: 480px) {
+  .camera-scanner-wrapper {
+    max-width: 100%;
+  }
+  .camera-scanner-wrapper video {
+    max-height: 280px;
+  }
 }
