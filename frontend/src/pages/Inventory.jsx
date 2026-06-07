@@ -174,7 +174,33 @@ export default function InventoryPage() {
                 const totalStock = item.stock_levels?.reduce((s, sl) => s + sl.quantity, 0) || 0;
                 const isLow = totalStock <= item.min_stock && item.min_stock > 0;
                 const isOut = totalStock === 0;
-                return (
+  const openPrintWindow = async (url) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(res.statusText);
+      const html = await res.text();
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(html); win.document.close(); }
+    } catch (err) {
+      alert('Failed to load: ' + err.message);
+    }
+  };
+
+  const openQrView = async (id) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/inventory/items/${id}/qr-code`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(res.statusText);
+      const svg = await res.text();
+      const win = window.open('', '_blank');
+      if (win) { win.document.write(svg); win.document.close(); }
+    } catch (err) {
+      alert('Failed to load QR: ' + err.message);
+    }
+  };
+
+  return (
                   <tr key={item.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <p className="font-medium">{item.name}</p>
@@ -306,9 +332,9 @@ export default function InventoryPage() {
                 <p className="text-sm font-mono mt-2 tracking-wider">{barcodeItem.barcode || barcodeItem.sku}</p>
               </div>
               <div className="flex justify-center gap-2 mb-6">
-                <a href={`/api/inventory/items/${barcodeItem.id}/barcode/print`} target="_blank" rel="noopener noreferrer" className="btn-primary btn-sm gap-1.5">
+                <button onClick={() => openPrintWindow(`/api/inventory/items/${barcodeItem.id}/barcode/print`)} className="btn-primary btn-sm gap-1.5">
                   <Printer size={14} /> Print Barcode
-                </a>
+                </button>
               </div>
 
               {/* Divider */}
@@ -326,12 +352,12 @@ export default function InventoryPage() {
                 <p className="text-xs text-gray-400 mt-2">Scan to lookup item</p>
               </div>
               <div className="flex justify-center gap-2">
-                <a href={`/api/inventory/items/${barcodeItem.id}/qr-print`} target="_blank" rel="noopener noreferrer" className="btn-primary btn-sm gap-1.5">
+                <button onClick={() => openPrintWindow(`/api/inventory/items/${barcodeItem.id}/qr-print`)} className="btn-primary btn-sm gap-1.5">
                   <Printer size={14} /> Print QR
-                </a>
-                <a href={`/api/inventory/items/${barcodeItem.id}/qr-code`} target="_blank" rel="noopener noreferrer" className="btn-secondary btn-sm gap-1.5">
+                </button>
+                <button onClick={() => openQrView(barcodeItem.id)} className="btn-secondary btn-sm gap-1.5">
                   <Eye size={14} /> View QR
-                </a>
+                </button>
               </div>
             </div>
           </div>

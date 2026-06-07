@@ -73,6 +73,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 <div class="barcode-img"><?php echo $this->buildCode128Svg($code); ?></div>
 <div class="code-text"><?php echo htmlspecialchars($code); ?></div>
 </div>
+<script>window.onload = function(){ window.print(); };</script>
 </body>
 </html>
         <?php
@@ -262,6 +263,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 <div class="name"><?php echo htmlspecialchars($inventoryItem->name); ?></div>
 <div class="sku">SKU: <?php echo htmlspecialchars($inventoryItem->sku); ?></div>
 </div>
+<script>window.onload = function(){ window.print(); };</script>
 </body>
 </html>
         <?php
