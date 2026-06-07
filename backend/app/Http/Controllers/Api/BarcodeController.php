@@ -60,8 +60,8 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
 .label { width: 70mm; text-align: center; }
 .label .name { font-size: 9px; font-weight: 600; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .label .sku { font-size: 7px; color: #666; margin-bottom: 3px; }
-.barcode-img { width: 100%; height: 12mm; margin-bottom: 1px; }
-.barcode-img svg { width: 100%; height: 100%; }
+.barcode-img { width: 100%; height: 15mm; margin-bottom: 1px; }
+.barcode-img svg { width: 100%; height: 100%; display: block; }
 .label .code-text { font-size: 8px; font-family: monospace; letter-spacing: 1px; }
 @media print { body { min-height: auto; } }
 </style>
@@ -355,8 +355,8 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         $bars = '00000000000' . $bars . '00000000000';
 
         // Render SVG
-        $barW = 1.5;
-        $h = 36;
+        $barW = 2;
+        $h = 50;
         $w = strlen($bars) * $barW;
 
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $w . '" height="' . $h . '" viewBox="0 0 ' . $w . ' ' . $h . '">';

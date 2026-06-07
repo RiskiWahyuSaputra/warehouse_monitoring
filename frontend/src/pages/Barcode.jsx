@@ -3,6 +3,30 @@ import api from '../services/api';
 import { Search, ScanBarcode, History, CheckCircle, XCircle, AlertTriangle, Camera, Keyboard, CameraOff, Zap } from 'lucide-react';
 import jsQR from 'jsqr';
 
+const BARCODE_FORMATS = ['qr_code', 'code_128', 'ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_39', 'code_93', 'codabar'];
+
+async function detectBarcode(canvas) {
+  // Try native BarcodeDetector API first (supports 1D + 2D)
+  if ('BarcodeDetector' in window) {
+    try {
+      const detector = new BarcodeDetector({ formats: BARCODE_FORMATS });
+      const barcodes = await detector.detect(canvas);
+      if (barcodes.length > 0) {
+        return barcodes[0];
+      }
+    } catch {}
+  }
+
+  // Fallback: jsQR for QR codes only
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  if (code) {
+    return { rawValue: code.data, format: 'qr_code' };
+  }
+  return null;
+}
+
 export default function BarcodePage() {
   const [mode, setMode] = useState('manual'); // manual, camera
   const [code, setCode] = useState('');
@@ -69,7 +93,7 @@ export default function BarcodePage() {
     if (videoRef.current) videoRef.current.srcObject = null;
   };
 
-  const tick = useCallback(() => {
+  const tick = useCallback(async () => {
     if (!scanning || !videoRef.current || !canvasRef.current || videoRef.current.readyState !== 4) {
       animFrameRef.current = requestAnimationFrame(tick);
       return;
@@ -83,14 +107,13 @@ export default function BarcodePage() {
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+    const barcode = await detectBarcode(canvas);
 
-    if (code && code.data) {
+    if (barcode && barcode.rawValue) {
       setScanning(false);
       stopCamera();
-      setCode(code.data);
-      handleCameraScan(code.data);
+      setCode(barcode.rawValue);
+      handleCameraScan(barcode.rawValue);
       return;
     }
 
