@@ -203,7 +203,7 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         ]);
     }
 
-    // ── QR CODE ─────────────────────────────────────
+    // ── QR CODE (using Endroid QR Code library) ─────
 
     /**
      * GET /api/inventory/items/{inventoryItem}/qr-code
@@ -211,14 +211,19 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
      */
     public function qrCode(InventoryItem $inventoryItem): Response
     {
-        $data = json_encode([
-            'id'   => $inventoryItem->id,
-            'sku'  => $inventoryItem->sku,
-            'name' => $inventoryItem->name,
-            'url'  => url('/api/barcode/lookup/' . ($inventoryItem->barcode ?: $inventoryItem->sku)),
-        ]);
+        $data = $inventoryItem->sku;
 
-        $svg = $this->buildQrSvg($data);
+        $qrCode = new \Endroid\QrCode\QrCode(
+            data: $data,
+            errorCorrectionLevel: \Endroid\QrCode\ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+            roundBlockSizeMode: \Endroid\QrCode\RoundBlockSizeMode::Margin,
+        );
+
+        $writer = new \Endroid\QrCode\Writer\SvgWriter();
+        $result = $writer->write($qrCode);
+        $svg = $result->getString();
 
         return response($svg, 200, [
             'Content-Type'  => 'image/svg+xml',
@@ -232,13 +237,19 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
      */
     public function qrPrint(InventoryItem $inventoryItem): Response
     {
-        $data = json_encode([
-            'id'   => $inventoryItem->id,
-            'sku'  => $inventoryItem->sku,
-            'name' => $inventoryItem->name,
-            'url'  => url('/api/barcode/lookup/' . ($inventoryItem->barcode ?: $inventoryItem->sku)),
-        ]);
-        $svg = $this->buildQrSvg($data);
+        $data = $inventoryItem->sku;
+
+        $qrCode = new \Endroid\QrCode\QrCode(
+            data: $data,
+            errorCorrectionLevel: \Endroid\QrCode\ErrorCorrectionLevel::High,
+            size: 300,
+            margin: 10,
+            roundBlockSizeMode: \Endroid\QrCode\RoundBlockSizeMode::Margin,
+        );
+
+        $writer = new \Endroid\QrCode\Writer\SvgWriter();
+        $result = $writer->write($qrCode);
+        $svg = $result->getString();
 
         ob_start();
         ?>
@@ -375,131 +386,4 @@ body { margin: 0; padding: 0; display: flex; justify-content: center; align-item
         return $svg;
     }
 
-    /**
-     * Build a QR Code SVG (pure PHP implementation).
-     */
-    private function buildQrSvg(string $data): string
-    {
-        $modules = $this->encodeQr($data);
-        $size = count($modules);
-        $scale = 4;
-        $svgSize = $size * $scale;
-
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" width="' . $svgSize . '" height="' . $svgSize . '" viewBox="0 0 ' . $svgSize . ' ' . $svgSize . '">';
-        $svg .= '<rect width="100%" height="100%" fill="#fff"/>';
-
-        for ($y = 0; $y < $size; $y++) {
-            for ($x = 0; $x < $size; $x++) {
-                if (!empty($modules[$y][$x])) {
-                    $svg .= '<rect x="' . ($x * $scale) . '" y="' . ($y * $scale) . '" width="' . $scale . '" height="' . $scale . '" fill="#000"/>';
-                }
-            }
-        }
-
-        $svg .= '</svg>';
-        return $svg;
-    }
-
-    private function encodeQr(string $data): array
-    {
-        $version = 1;
-        $size = 17 + 4 * $version;
-        $grid = array_fill(0, $size, array_fill(0, $size, false));
-
-        $this->addFinderPattern($grid, 0, 0);
-        $this->addFinderPattern($grid, $size - 7, 0);
-        $this->addFinderPattern($grid, 0, $size - 7);
-
-        for ($i = 8; $i < $size - 8; $i++) {
-            $grid[6][$i] = ($i % 2 === 0);
-            $grid[$i][6] = ($i % 2 === 0);
-        }
-
-        $grid[$size - 8][8] = true;
-
-        $encoded = $this->encodeAlphanumeric($data);
-        $bitIndex = 0;
-        $direction = -1;
-        $col = $size - 1;
-
-        while ($col >= 0) {
-            if ($col === 6) $col--;
-            if ($col < 0) break;
-
-            for ($i = 0; $i < $size; $i++) {
-                $r = ($direction === -1) ? ($size - 1 - $i) : $i;
-
-                for ($c = 0; $c < 2; $c++) {
-                    $cc = $col - $c;
-                    if ($cc < 0) continue;
-                    if ($this->isFunctionPattern($r, $cc, $size)) continue;
-
-                    $bit = isset($encoded[$bitIndex]) ? $encoded[$bitIndex] : false;
-                    $grid[$r][$cc] = $bit;
-                    $bitIndex++;
-                }
-            }
-
-            $col -= 2;
-            $direction *= -1;
-        }
-
-        return $grid;
-    }
-
-    private function addFinderPattern(array &$grid, int $sr, int $sc): void
-    {
-        $p = [[1,1,1,1,1,1,1],[1,0,0,0,0,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,1,1,1,0,1],[1,0,0,0,0,0,1],[1,1,1,1,1,1,1]];
-        for ($r = 0; $r < 7; $r++)
-            for ($c = 0; $c < 7; $c++)
-                $grid[$sr + $r][$sc + $c] = (bool) $p[$r][$c];
-    }
-
-    private function isFunctionPattern(int $r, int $c, int $s): bool
-    {
-        if (($r < 9 && $c < 9) || ($r < 9 && $c >= $s - 8) || ($r >= $s - 8 && $c < 9)) return true;
-        if ($r === 6 || $c === 6) return true;
-        if ($r === $s - 8 && $c === 8) return true;
-        return false;
-    }
-
-    private function encodeAlphanumeric(string $data): array
-    {
-        $bits = [0,0,0,1]; // mode
-        $len = strlen($data);
-        $cb = str_pad(decbin($len), 9, '0', STR_PAD_LEFT);
-        for ($i = 0; $i < 9; $i++) $bits[] = (int) $cb[$i];
-
-        $an = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ $%*+-./:';
-        $i = 0;
-        while ($i < $len) {
-            $c1 = strpos($an, strtoupper($data[$i]));
-            if ($c1 === false) $c1 = 0;
-            if ($i + 1 < $len) {
-                $c2 = strpos($an, strtoupper($data[$i + 1]));
-                if ($c2 === false) $c2 = 0;
-                $v = $c1 * 45 + $c2;
-                $b = str_pad(decbin($v), 11, '0', STR_PAD_LEFT);
-                for ($j = 0; $j < 11; $j++) $bits[] = (int) $b[$j];
-                $i += 2;
-            } else {
-                $b = str_pad(decbin($c1), 6, '0', STR_PAD_LEFT);
-                for ($j = 0; $j < 6; $j++) $bits[] = (int) $b[$j];
-                $i++;
-            }
-        }
-
-        $bits = array_merge($bits, [0,0,0,0]);
-        while (count($bits) % 8 !== 0) $bits[] = 0;
-        $pad = [236, 17];
-        $pi = 0;
-        while (count($bits) < 152) {
-            $byte = $pad[$pi % 2];
-            $b = str_pad(decbin($byte), 8, '0', STR_PAD_LEFT);
-            for ($j = 0; $j < 8; $j++) $bits[] = (int) $b[$j];
-            $pi++;
-        }
-
-        return $bits;
-    }
 }
