@@ -176,19 +176,22 @@ export default function BarcodePage() {
     setLoading(true);
     setError('');
     setResult(null);
+
+    // Try html5-qrcode first (uses ZXing, supports 1D + QR)
     try {
-      // Primary: html5-qrcode (uses ZXing, supports 1D + QR)
       const scanner = new Html5Qrcode('upload-scanner');
       const text = await scanner.scanFile(file, false);
       scanner.clear();
       if (text) {
         setCode(text);
-        handleCameraScan(text);
+        await handleCameraScan(text);
         setLoading(false);
         e.target.value = '';
         return;
       }
-    } catch {}
+    } catch (err) {
+      console.warn('html5-qrcode failed:', err);
+    }
 
     // Fallback: decode from canvas via quagga + jsQR
     try {
@@ -217,6 +220,7 @@ export default function BarcodePage() {
       }
       setError('No barcode detected in the image. Try a clearer photo.');
     } catch (err) {
+      console.error('Fallback detection failed:', err);
       setError('Failed to process image: ' + err.message);
     }
     setLoading(false);
@@ -246,6 +250,7 @@ export default function BarcodePage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
+      <div id="upload-scanner" style={{position:'fixed',left:'-9999px',top:'-9999px',width:'320px',height:'240px'}}></div>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -296,7 +301,6 @@ export default function BarcodePage() {
 
       {/* Scan area */}
       <div className="card p-6">
-        <div id="upload-scanner" className="hidden"></div>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2">
             <button
