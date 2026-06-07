@@ -181,8 +181,8 @@ export default function BarcodePage() {
       img.src = URL.createObjectURL(file);
       await img.decode();
       const canvas = document.createElement('canvas');
-      const maxDim = 800;
       let { width, height } = img;
+      const maxDim = 2000;
       if (width > maxDim || height > maxDim) {
         const scale = maxDim / Math.max(width, height);
         width = Math.round(width * scale);

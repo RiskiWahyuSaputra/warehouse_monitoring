@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText, ScanBarcode, Printer, Eye } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText, ScanBarcode, Printer, Eye, Download } from 'lucide-react';
 
 export default function InventoryPage() {
   const { hasRole } = useAuth();
@@ -111,6 +111,26 @@ export default function InventoryPage() {
       if (win) { win.document.write(html); win.document.close(); }
     } catch (err) {
       alert('Failed to load: ' + err.message);
+    }
+  };
+
+  const downloadSvg = async (url, filename) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) throw new Error(res.statusText);
+      const svg = await res.text();
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      alert('Failed to download: ' + err.message);
     }
   };
 
@@ -326,12 +346,15 @@ export default function InventoryPage() {
                 <img
                   src={`/api/inventory/items/${barcodeItem.id}/barcode/svg`}
                   alt={`Barcode ${barcodeItem.barcode || barcodeItem.sku}`}
-                  className="mx-auto max-w-full h-16"
+                  className="mx-auto max-w-full h-24"
                   onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <p className="text-sm font-mono mt-2 tracking-wider">{barcodeItem.barcode || barcodeItem.sku}</p>
               </div>
               <div className="flex justify-center gap-2 mb-6">
+                <button onClick={() => downloadSvg(`/api/inventory/items/${barcodeItem.id}/barcode/svg`, `barcode-${barcodeItem.sku}.svg`)} className="btn-secondary btn-sm gap-1.5">
+                  <Download size={14} /> Download
+                </button>
                 <button onClick={() => openPrintWindow(`/api/inventory/items/${barcodeItem.id}/barcode/print`)} className="btn-primary btn-sm gap-1.5">
                   <Printer size={14} /> Print Barcode
                 </button>
@@ -352,6 +375,9 @@ export default function InventoryPage() {
                 <p className="text-xs text-gray-400 mt-2">Scan to lookup item</p>
               </div>
               <div className="flex justify-center gap-2">
+                <button onClick={() => downloadSvg(`/api/inventory/items/${barcodeItem.id}/qr-code`, `qr-${barcodeItem.sku}.svg`)} className="btn-secondary btn-sm gap-1.5">
+                  <Download size={14} /> Download
+                </button>
                 <button onClick={() => openPrintWindow(`/api/inventory/items/${barcodeItem.id}/qr-print`)} className="btn-primary btn-sm gap-1.5">
                   <Printer size={14} /> Print QR
                 </button>
