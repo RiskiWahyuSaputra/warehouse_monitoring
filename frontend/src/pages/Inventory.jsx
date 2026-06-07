@@ -200,33 +200,7 @@ export default function InventoryPage() {
                 const totalStock = item.stock_levels?.reduce((s, sl) => s + sl.quantity, 0) || 0;
                 const isLow = totalStock <= item.min_stock && item.min_stock > 0;
                 const isOut = totalStock === 0;
-  const openPrintWindow = async (url) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error(res.statusText);
-      const html = await res.text();
-      const win = window.open('', '_blank');
-      if (win) { win.document.write(html); win.document.close(); }
-    } catch (err) {
-      alert('Failed to load: ' + err.message);
-    }
-  };
-
-  const openQrView = async (id) => {
-    try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/inventory/items/${id}/qr-code`, { headers: { Authorization: `Bearer ${token}` } });
-      if (!res.ok) throw new Error(res.statusText);
-      const svg = await res.text();
-      const win = window.open('', '_blank');
-      if (win) { win.document.write(svg); win.document.close(); }
-    } catch (err) {
-      alert('Failed to load QR: ' + err.message);
-    }
-  };
-
-  return (
+                return (
                   <tr key={item.id} className="border-b hover:bg-gray-50">
                     <td className="px-4 py-3">
                       <p className="font-medium">{item.name}</p>
