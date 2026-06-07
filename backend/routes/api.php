@@ -42,10 +42,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/lookup/{code}', [BarcodeController::class, 'lookup']);
     });
     Route::get('/inventory/items/{inventoryItem}/barcode', [BarcodeController::class, 'generate']);
-    Route::get('/inventory/items/{inventoryItem}/barcode/svg', [BarcodeController::class, 'svg']);
-    Route::get('/inventory/items/{inventoryItem}/barcode/print', [BarcodeController::class, 'printLabel']);
-    Route::get('/inventory/items/{inventoryItem}/qr-code', [BarcodeController::class, 'qrCode']);
-    Route::get('/inventory/items/{inventoryItem}/qr-print', [BarcodeController::class, 'qrPrint']);
 
     // Approvals — all authenticated users (scoped by role in controller)
     Route::get('/approvals', [ApprovalController::class, 'index']);
@@ -109,3 +105,9 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::get('/ping', fn() => response()->json(['message' => 'ok']));
+
+// Barcode/QR images & print — public (no auth needed for images)
+Route::get('/inventory/items/{inventoryItem}/barcode/svg', [BarcodeController::class, 'svg']);
+Route::get('/inventory/items/{inventoryItem}/barcode/print', [BarcodeController::class, 'printLabel']);
+Route::get('/inventory/items/{inventoryItem}/qr-code', [BarcodeController::class, 'qrCode']);
+Route::get('/inventory/items/{inventoryItem}/qr-print', [BarcodeController::class, 'qrPrint']);
