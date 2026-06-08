@@ -40,9 +40,9 @@ function ConfirmDialog({ open, title, message, confirmText, cancelText, variant,
   if (!open) return null;
 
   const variants = {
-    danger: { icon: 'text-red-500 bg-red-50', btn: 'btn-danger', border: 'border-red-200' },
-    warning: { icon: 'text-yellow-500 bg-yellow-50', btn: 'bg-yellow-600 text-white hover:bg-yellow-700', border: 'border-yellow-200' },
-    info: { icon: 'text-blue-500 bg-blue-50', btn: 'btn-primary', border: 'border-blue-200' },
+    danger: { icon: 'text-red-500 bg-red-50 dark:text-red-400 dark:bg-red-900/20', btn: 'btn-danger', border: 'border-red-200 dark:border-red-900' },
+    warning: { icon: 'text-yellow-500 bg-yellow-50 dark:text-yellow-400 dark:bg-yellow-900/20', btn: 'bg-yellow-600 text-white hover:bg-yellow-700', border: 'border-yellow-200 dark:border-yellow-900' },
+    info: { icon: 'text-blue-500 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/20', btn: 'btn-primary', border: 'border-blue-200 dark:border-blue-900' },
   };
 
   const v = variants[variant] || variants.danger;
