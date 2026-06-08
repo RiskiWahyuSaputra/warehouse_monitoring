@@ -62,7 +62,7 @@ export default function UsersPage() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700"
+          <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700">
             <tr>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Name</th>
               <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Email</th>
