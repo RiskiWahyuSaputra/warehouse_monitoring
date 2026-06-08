@@ -38,15 +38,15 @@ export function EmptyState({
 export function EmptySearch({ searchTerm, onClear }) {
   return (
     <div className="text-center py-12 px-4">
-      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-        <Search size={28} className="text-gray-300" />
+      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4 dark:bg-gray-800">
+        <Search size={28} className="text-gray-300 dark:text-gray-600" />
       </div>
-      <h3 className="text-sm font-medium text-gray-500">No results found</h3>
-      <p className="text-xs text-gray-400 mt-1">
-        No items match "<span className="font-medium text-gray-500">{searchTerm}</span>"
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">No results found</h3>
+      <p className="text-xs text-gray-400 mt-1 dark:text-gray-500">
+        No items match "<span className="font-medium text-gray-500 dark:text-gray-300">{searchTerm}</span>"
       </p>
       {onClear && (
-        <button onClick={onClear} className="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium">
+        <button onClick={onClear} className="mt-3 text-xs text-primary-600 hover:text-primary-700 font-medium dark:text-primary-400 dark:hover:text-primary-300">
           Clear search
         </button>
       )}
