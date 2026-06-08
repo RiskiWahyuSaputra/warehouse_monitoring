@@ -89,8 +89,8 @@ export default function MovementsPage() {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold">Stock Movements</h1>
-          <p className="text-gray-500">{meta.total || 0} records</p>
+          <h1 className="text-2xl font-bold dark:text-gray-100">Stock Movements</h1>
+          <p className="text-gray-500 dark:text-gray-400">{meta.total || 0} records</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => setShowForm(true)} className="btn-primary gap-2"><Plus size={16} /> Record Movement</button>
