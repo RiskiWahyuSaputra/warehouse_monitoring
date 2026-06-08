@@ -69,13 +69,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/locations/{location}', [LocationController::class, 'show']);
         Route::get('/categories', [CategoryController::class, 'index']);
         Route::get('/categories/{category}', [CategoryController::class, 'show']);
+        Route::get('/suppliers', [SupplierController::class, 'index']);
+        Route::get('/suppliers/{supplier}', [SupplierController::class, 'show']);
     });
 
     // Admin/Manager only
     Route::middleware('role:admin,manager')->group(function () {
         Route::apiResource('categories', CategoryController::class)->except(['index', 'show']);
         Route::apiResource('locations', LocationController::class)->except(['index', 'show']);
-        Route::apiResource('suppliers', SupplierController::class);
+        Route::apiResource('suppliers', SupplierController::class)->except(['index', 'show']);
         Route::apiResource('inventory-items', InventoryItemController::class)->except(['index', 'show']);
         Route::post('/approvals/{approvalRequest}/decide', [ApprovalController::class, 'decide']);
         Route::prefix('export')->group(function () {
