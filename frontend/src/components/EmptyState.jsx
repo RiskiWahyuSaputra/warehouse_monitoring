@@ -1,4 +1,4 @@
-import { Inbox, Search, FolderOpen, MapPin, Truck, FileText, ClipboardCheck, Bell, Users, Package, ArrowRightLeft } from 'lucide-react';
+import { Inbox, Search, FolderOpen, MapPin, Truck, FileText, ClipboardCheck, Bell, Users, Package, ArrowRightLeft, TrendingUp } from 'lucide-react';
 
 const iconMap = {
   default: Inbox,
