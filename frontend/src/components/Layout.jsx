@@ -1,8 +1,9 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
-  Users, BarChart3, ScanBarcode, Settings, LogOut, Menu, X, Bell, Tag, MapPin, Warehouse, Truck, FileText, Shield
+  Users, BarChart3, ScanBarcode, LogOut, Menu, X, Bell, Tag, MapPin, Truck, FileText, Sun, Moon
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
@@ -24,6 +25,7 @@ const navItems = [
 
 export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth();
+  const { dark, toggle: toggleDark } = useTheme();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -31,7 +33,6 @@ export default function Layout({ children }) {
   const handleLogout = () => { logout(); navigate('/login'); };
   const filteredNav = navItems.filter((item) => hasRole(...item.roles));
 
-  // Fetch unread notification count
   useEffect(() => {
     const fetchUnread = async () => {
       try {
@@ -40,23 +41,22 @@ export default function Layout({ children }) {
       } catch {}
     };
     fetchUnread();
-    // Poll every 30 seconds
     const interval = setInterval(fetchUnread, 30000);
     return () => clearInterval(interval);
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
       {/* Sidebar overlay for mobile */}
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform lg:relative lg:translate-x-0 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-          <h1 className="text-lg font-bold text-primary-700">Warehouse Monitor</h1>
-          <button className="lg:hidden" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform lg:relative lg:translate-x-0 dark:bg-gray-900 dark:border-gray-800 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200 dark:border-gray-800">
+          <h1 className="text-lg font-bold text-primary-700 dark:text-primary-400">Warehouse Monitor</h1>
+          <button className="lg:hidden dark:text-gray-400" onClick={() => setSidebarOpen(false)}><X size={20} /></button>
         </div>
         <nav className="p-4 space-y-1">
           {filteredNav.map((item) => (
@@ -65,7 +65,7 @@ export default function Layout({ children }) {
               to={item.to}
               onClick={() => setSidebarOpen(false)}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-700' : 'text-gray-600 hover:bg-gray-100'}`
+                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-400' : 'text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800'}`
               }
             >
               <item.icon size={18} />
@@ -83,14 +83,23 @@ export default function Layout({ children }) {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200">
-          <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100" onClick={() => setSidebarOpen(true)}>
+        <header className="flex items-center justify-between h-16 px-4 bg-white border-b border-gray-200 dark:bg-gray-900 dark:border-gray-800">
+          <button className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 dark:text-gray-300" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
-          <div className="flex items-center gap-4 ml-auto">
+          <div className="flex items-center gap-3 ml-auto">
+            {/* Dark mode toggle */}
+            <button
+              onClick={toggleDark}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors"
+              title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+            >
+              {dark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
             <button
               onClick={() => navigate('/notifications')}
-              className="p-2 rounded-lg hover:bg-gray-100 relative"
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 relative dark:text-gray-300"
             >
               <Bell size={18} />
               {unreadCount > 0 && (
@@ -100,15 +109,15 @@ export default function Layout({ children }) {
               )}
             </button>
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-sm font-medium">
+              <div className="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-700 text-sm font-medium dark:bg-primary-900/40 dark:text-primary-400">
                 {user?.name?.charAt(0)?.toUpperCase()}
               </div>
               <div className="hidden sm:block">
-                <p className="text-sm font-medium">{user?.name}</p>
-                <p className="text-xs text-gray-500 capitalize">{user?.role?.name}</p>
+                <p className="text-sm font-medium dark:text-gray-200">{user?.name}</p>
+                <p className="text-xs text-gray-500 dark:text-gray-500 capitalize">{user?.role?.name}</p>
               </div>
             </div>
-            <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-gray-100 text-gray-500">
+            <button onClick={handleLogout} className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400">
               <LogOut size={18} />
             </button>
           </div>

@@ -88,21 +88,15 @@ export default function SuppliersPage() {
     setShowForm(true);
   };
 
-  const filtered = suppliers.filter((s) =>
-    s.name.toLowerCase().includes(search.toLowerCase()) ||
-    s.email?.toLowerCase().includes(search.toLowerCase()) ||
-    s.contact_person?.toLowerCase().includes(search.toLowerCase())
-  );
-
   const renderStars = (score) => {
-    if (!score) return <span className="text-gray-400 text-xs">No rating</span>;
+    if (!score) return <span className="text-gray-400 text-xs dark:text-gray-500">No rating</span>;
     const stars = Math.round(score);
     return (
       <div className="flex items-center gap-0.5">
         {[1, 2, 3, 4, 5].map((i) => (
-          <Star key={i} size={12} className={i <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'} />
+          <Star key={i} size={12} className={i <= stars ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300 dark:text-gray-600'} />
         ))}
-        <span className="text-xs text-gray-500 ml-1">{score}</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400 ml-1">{score}</span>
       </div>
     );
   };
@@ -112,10 +106,10 @@ export default function SuppliersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 dark:text-gray-100">
             <Truck size={24} /> Suppliers
           </h1>
-          <p className="text-gray-500 text-sm">{meta.total || 0} suppliers total</p>
+          <p className="text-gray-500 text-sm dark:text-gray-400">{meta.total || 0} suppliers total</p>
         </div>
         {isAdmin && (
           <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
@@ -143,7 +137,7 @@ export default function SuppliersPage() {
           <div className="p-4">
             <TableSkeleton rows={5} cols={isAdmin ? 6 : 5} />
           </div>
-        ) : filtered.length === 0 ? (
+        ) : suppliers.length === 0 ? (
           search ? (
             <EmptySearch searchTerm={search} onClear={() => { setSearch(''); setPage(1); }} />
           ) : (
@@ -163,45 +157,45 @@ export default function SuppliersPage() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700">
                 <tr>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600">Supplier</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Contact</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">Email</th>
-                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Phone</th>
-                  <th className="text-center px-4 py-3 font-medium text-gray-600">Rating</th>
-                  {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Supplier</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell dark:text-gray-400">Contact</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell dark:text-gray-400">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell dark:text-gray-400">Phone</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Rating</th>
+                  {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Actions</th>}
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((sup) => (
-                  <tr key={sup.id} className="border-b hover:bg-gray-50">
+                {suppliers.map((sup) => (
+                  <tr key={sup.id} className="border-b hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-semibold text-xs">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-semibold text-xs dark:bg-purple-900/30 dark:text-purple-400">
                           {sup.name.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <p className="font-medium">{sup.name}</p>
+                          <p className="font-medium dark:text-gray-200">{sup.name}</p>
                           {sup.address && (
-                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5 dark:text-gray-500">
                               <MapPin size={10} /> {sup.address.slice(0, 30)}{sup.address.length > 30 ? '...' : ''}
                             </p>
                           )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{sup.contact_person || '-'}</td>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell dark:text-gray-400">{sup.contact_person || '-'}</td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {sup.email ? (
-                        <a href={`mailto:${sup.email}`} className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs">
+                        <a href={`mailto:${sup.email}`} className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs dark:text-blue-400 dark:hover:text-blue-300">
                           <Mail size={12} /> {sup.email}
                         </a>
                       ) : '-'}
                     </td>
                     <td className="px-4 py-3 hidden sm:table-cell">
                       {sup.phone ? (
-                        <span className="flex items-center gap-1 text-gray-600 text-xs">
+                        <span className="flex items-center gap-1 text-gray-600 text-xs dark:text-gray-400">
                           <Phone size={12} /> {sup.phone}
                         </span>
                       ) : '-'}
@@ -209,10 +203,10 @@ export default function SuppliersPage() {
                     <td className="px-4 py-3 text-center">{renderStars(sup.performance_score)}</td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
-                        <button onClick={() => startEdit(sup)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                        <button onClick={() => startEdit(sup)} className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Edit">
                           <Edit2 size={14} />
                         </button>
-                        <button onClick={() => handleDelete(sup)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
+                        <button onClick={() => handleDelete(sup)} className="p-1.5 rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 ml-1" title="Delete">
                           <Trash2 size={14} />
                         </button>
                       </td>
@@ -226,8 +220,8 @@ export default function SuppliersPage() {
 
         {/* Pagination */}
         {meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-            <p className="text-xs text-gray-500">Page {meta.current_page} of {meta.last_page}</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Page {meta.current_page} of {meta.last_page}</p>
             <div className="flex gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary btn-sm">Prev</button>
               <button onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="btn-secondary btn-sm">Next</button>
@@ -240,9 +234,9 @@ export default function SuppliersPage() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
           <div className="card w-full max-w-lg max-h-[90vh] overflow-auto">
-            <div className="flex items-center justify-between p-4 border-b">
-              <h2 className="text-lg font-semibold">{editing ? 'Edit Supplier' : 'Add Supplier'}</h2>
-              <button onClick={resetForm} className="p-1 rounded hover:bg-gray-100"><X size={18} /></button>
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold dark:text-gray-100">{editing ? 'Edit Supplier' : 'Add Supplier'}</h2>
+              <button onClick={resetForm} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"><X size={18} /></button>
             </div>
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
