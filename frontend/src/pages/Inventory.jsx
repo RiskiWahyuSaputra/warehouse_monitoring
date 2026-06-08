@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react';
 import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Plus, Search, Edit2, Trash2, X, Filter, FileSpreadsheet, FileText, ScanBarcode, Printer, Eye, Download } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState, EmptySearch } from '../components/EmptyState';
 
 export default function InventoryPage() {
   const { hasRole } = useAuth();
@@ -55,19 +59,33 @@ export default function InventoryPage() {
     try {
       if (editing) {
         await api.put(`/inventory-items/${editing.id}`, form);
+        toast('Item updated successfully', 'success');
       } else {
         await api.post('/inventory-items', { ...form, location_id: form.location_id || undefined, initial_stock: form.initial_stock || undefined });
+        toast('Item created successfully', 'success');
       }
       resetForm();
       fetchItems();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error saving item');
+      toast(err.response?.data?.message || 'Error saving item', 'error');
     }
   };
 
   const handleDelete = async (item) => {
-    if (!confirm(`Delete "${item.name}"?`)) return;
-    try { await api.delete(`/inventory-items/${item.id}`); fetchItems(); } catch {}
+    const result = await confirm({
+      title: 'Delete Item',
+      message: `Are you sure you want to delete "${item.name}"? This action cannot be undone.`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+    if (!result) return;
+    try {
+      await api.delete(`/inventory-items/${item.id}`);
+      toast('Item deleted successfully', 'success');
+      fetchItems();
+    } catch (err) {
+      toast(err.response?.data?.message || 'Error deleting item', 'error');
+    }
   };
 
   const startEdit = (item) => {
@@ -213,9 +231,26 @@ export default function InventoryPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr className="border-b"><td colSpan={isAdmin ? 8 : 7} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr className="border-b"><td colSpan={isAdmin ? 8 : 7} className="p-4"><TableSkeleton rows={5} cols={isAdmin ? 8 : 7} /></td></tr>
               ) : items.length === 0 ? (
-                <tr className="border-b"><td colSpan={isAdmin ? 8 : 7} className="text-center py-12 text-gray-400">No items found</td></tr>
+                <tr><td colSpan={isAdmin ? 8 : 7}>
+                  {search || categoryFilter || statusFilter ? (
+                    <EmptySearch searchTerm={search || categoryFilter || statusFilter} onClear={() => { setSearch(''); setCategoryFilter(''); setStatusFilter(''); setPage(1); }} />
+                  ) : (
+                    <EmptyState
+                      icon="inventory"
+                      title="No items yet"
+                      description="Add your first inventory item to start tracking stock."
+                      action={
+                        isAdmin && (
+                          <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
+                            <Plus size={16} /> Add Item
+                          </button>
+                        )
+                      }
+                    />
+                  )}
+                </td></tr>
               ) : items.map((item) => {
                 const totalStock = item.stock_levels?.reduce((s, sl) => s + sl.quantity, 0) || 0;
                 const isLow = totalStock <= item.min_stock && item.min_stock > 0;

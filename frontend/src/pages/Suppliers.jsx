@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Plus, Search, Edit2, Trash2, X, Truck, Star, Mail, Phone, MapPin } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState, EmptySearch } from '../components/EmptyState';
 
 export default function SuppliersPage() {
   const { hasRole } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [suppliers, setSuppliers] = useState([]);
   const [meta, setMeta] = useState({});
   const [loading, setLoading] = useState(true);
@@ -12,9 +18,8 @@ export default function SuppliersPage() {
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({
-    name: '', contact_person: '', email: '', phone: '', address: '', performance_score: '',
-  });
+  const [form, setForm] = useState({ name: '', contact_person: '', email: '', phone: '', address: '', performance_score: '' });
+  const [saving, setSaving] = useState(false);
 
   const isAdmin = hasRole('admin', 'manager');
 
@@ -25,7 +30,9 @@ export default function SuppliersPage() {
       const res = await api.get(`/suppliers?${params}`);
       setSuppliers(res.data.data);
       setMeta({ current_page: res.data.current_page, last_page: res.data.last_page, total: res.data.total });
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast('Failed to load suppliers', 'error');
+    }
     setLoading(false);
   };
 
@@ -39,40 +46,44 @@ export default function SuppliersPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       const data = { ...form };
       if (!data.performance_score) delete data.performance_score;
       if (editing) {
         await api.put(`/suppliers/${editing.id}`, data);
+        toast('Supplier updated successfully', 'success');
       } else {
         await api.post('/suppliers', data);
+        toast('Supplier created successfully', 'success');
       }
       resetForm();
       fetchSuppliers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error saving supplier');
+      toast(err.response?.data?.message || 'Error saving supplier', 'error');
     }
+    setSaving(false);
   };
 
   const handleDelete = async (sup) => {
-    if (!confirm(`Delete "${sup.name}"?`)) return;
+    const result = await confirm({
+      title: 'Delete Supplier',
+      message: `Are you sure you want to delete "${sup.name}"?`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+    if (!result) return;
     try {
       await api.delete(`/suppliers/${sup.id}`);
+      toast('Supplier deleted successfully', 'success');
       fetchSuppliers();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error deleting supplier');
+      toast(err.response?.data?.message || 'Error deleting supplier', 'error');
     }
   };
 
   const startEdit = (sup) => {
-    setForm({
-      name: sup.name,
-      contact_person: sup.contact_person || '',
-      email: sup.email || '',
-      phone: sup.phone || '',
-      address: sup.address || '',
-      performance_score: sup.performance_score || '',
-    });
+    setForm({ name: sup.name, contact_person: sup.contact_person || '', email: sup.email || '', phone: sup.phone || '', address: sup.address || '', performance_score: sup.performance_score || '' });
     setEditing(sup);
     setShowForm(true);
   };
@@ -119,7 +130,7 @@ export default function SuppliersPage() {
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             className="input pl-9"
-            placeholder="Search by name, email, or contact person..."
+            placeholder="Search by name, email, or contact..."
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           />
@@ -128,77 +139,90 @@ export default function SuppliersPage() {
 
       {/* Table */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Supplier</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Contact</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Phone</th>
-                <th className="text-center px-4 py-3 font-medium text-gray-600">Rating</th>
-                {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr className="border-b">
-                  <td colSpan={isAdmin ? 6 : 5} className="text-center py-12 text-gray-400">Loading...</td>
+        {loading ? (
+          <div className="p-4">
+            <TableSkeleton rows={5} cols={isAdmin ? 6 : 5} />
+          </div>
+        ) : filtered.length === 0 ? (
+          search ? (
+            <EmptySearch searchTerm={search} onClear={() => { setSearch(''); setPage(1); }} />
+          ) : (
+            <EmptyState
+              icon="suppliers"
+              title="No suppliers yet"
+              description="Add your first supplier to start tracking procurement."
+              action={
+                isAdmin && (
+                  <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
+                    <Plus size={16} /> Add Supplier
+                  </button>
+                )
+              }
+            />
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Supplier</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Contact</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell">Email</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Phone</th>
+                  <th className="text-center px-4 py-3 font-medium text-gray-600">Rating</th>
+                  {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr className="border-b">
-                  <td colSpan={isAdmin ? 6 : 5} className="text-center py-12 text-gray-400">
-                    {search ? 'No suppliers found' : 'No suppliers yet. Add one to get started.'}
-                  </td>
-                </tr>
-              ) : filtered.map((sup) => (
-                <tr key={sup.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-semibold text-xs">
-                        {sup.name.charAt(0).toUpperCase()}
+              </thead>
+              <tbody>
+                {filtered.map((sup) => (
+                  <tr key={sup.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center text-purple-600 font-semibold text-xs">
+                          {sup.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <p className="font-medium">{sup.name}</p>
+                          {sup.address && (
+                            <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
+                              <MapPin size={10} /> {sup.address.slice(0, 30)}{sup.address.length > 30 ? '...' : ''}
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{sup.name}</p>
-                        {sup.address && (
-                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-0.5">
-                            <MapPin size={10} /> {sup.address.slice(0, 40)}{sup.address.length > 40 ? '...' : ''}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-600">{sup.contact_person || '-'}</td>
-                  <td className="px-4 py-3">
-                    {sup.email ? (
-                      <a href={`mailto:${sup.email}`} className="text-blue-600 hover:text-blue-700 flex items-center gap-1">
-                        <Mail size={12} /> {sup.email}
-                      </a>
-                    ) : '-'}
-                  </td>
-                  <td className="px-4 py-3">
-                    {sup.phone ? (
-                      <span className="flex items-center gap-1 text-gray-600">
-                        <Phone size={12} /> {sup.phone}
-                      </span>
-                    ) : '-'}
-                  </td>
-                  <td className="px-4 py-3 text-center">{renderStars(sup.performance_score)}</td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(sup)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(sup)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
-                        <Trash2 size={14} />
-                      </button>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{sup.contact_person || '-'}</td>
+                    <td className="px-4 py-3 hidden lg:table-cell">
+                      {sup.email ? (
+                        <a href={`mailto:${sup.email}`} className="text-blue-600 hover:text-blue-700 flex items-center gap-1 text-xs">
+                          <Mail size={12} /> {sup.email}
+                        </a>
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell">
+                      {sup.phone ? (
+                        <span className="flex items-center gap-1 text-gray-600 text-xs">
+                          <Phone size={12} /> {sup.phone}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-center">{renderStars(sup.performance_score)}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => startEdit(sup)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(sup)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Pagination */}
         {meta.last_page > 1 && (
@@ -223,74 +247,35 @@ export default function SuppliersPage() {
             <form onSubmit={handleSubmit} className="p-4 space-y-4">
               <div>
                 <label className="label">Company Name *</label>
-                <input
-                  className="input"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  required
-                  placeholder="e.g. PT Teknologi Maju"
-                />
+                <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="e.g. PT Teknologi Maju" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="label">Contact Person *</label>
-                  <input
-                    className="input"
-                    value={form.contact_person}
-                    onChange={(e) => setForm({ ...form, contact_person: e.target.value })}
-                    required
-                    placeholder="e.g. Budi Santoso"
-                  />
+                  <input className="input" value={form.contact_person} onChange={(e) => setForm({ ...form, contact_person: e.target.value })} required placeholder="e.g. Budi Santoso" />
                 </div>
                 <div>
                   <label className="label">Phone *</label>
-                  <input
-                    className="input"
-                    value={form.phone}
-                    onChange={(e) => setForm({ ...form, phone: e.target.value })}
-                    required
-                    placeholder="e.g. 021-5550001"
-                  />
+                  <input className="input" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} required placeholder="e.g. 021-5550001" />
                 </div>
               </div>
               <div>
                 <label className="label">Email *</label>
-                <input
-                  className="input"
-                  type="email"
-                  value={form.email}
-                  onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  required
-                  placeholder="e.g. budi@supplier.co.id"
-                />
+                <input className="input" type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required placeholder="e.g. budi@supplier.co.id" />
               </div>
               <div>
                 <label className="label">Address *</label>
-                <textarea
-                  className="input"
-                  rows={2}
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  required
-                  placeholder="Full address..."
-                />
+                <textarea className="input" rows={2} value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} required placeholder="Full address..." />
               </div>
               <div>
                 <label className="label">Performance Score (0-5)</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  max="5"
-                  step="0.1"
-                  value={form.performance_score}
-                  onChange={(e) => setForm({ ...form, performance_score: e.target.value })}
-                  placeholder="e.g. 4.5"
-                />
+                <input className="input" type="number" min="0" max="5" step="0.1" value={form.performance_score} onChange={(e) => setForm({ ...form, performance_score: e.target.value })} placeholder="e.g. 4.5" />
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">{editing ? 'Update' : 'Create'}</button>
+                <button type="button" onClick={resetForm} className="btn-secondary" disabled={saving}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+                </button>
               </div>
             </form>
           </div>

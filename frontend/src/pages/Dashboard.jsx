@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api, { downloadFile } from '../services/api';
-import { TrendingUp, TrendingDown, Package, AlertTriangle, ClipboardCheck, BarChart3, Boxes, Download, FileSpreadsheet, FileText } from 'lucide-react';
+import { TrendingUp, TrendingDown, Package, AlertTriangle, ClipboardCheck, BarChart3, Boxes, Download, FileSpreadsheet, FileText, RefreshCw } from 'lucide-react';
+import { Skeleton, StatCardSkeleton, CardSkeleton } from '../components/Skeleton';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
@@ -42,6 +43,7 @@ export default function DashboardPage() {
   const [warnings, setWarnings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState('');
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   const handleExport = async (type) => {
     setExporting(type);
@@ -77,6 +79,7 @@ export default function DashboardPage() {
         setStats(s.data);
         setCharts(c.data);
         setWarnings(w.data.warnings || []);
+        setLastUpdated(new Date());
       } catch (err) {
         console.error(err);
       } finally {
@@ -84,15 +87,20 @@ export default function DashboardPage() {
       }
     };
     fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center h-96">
-      <div className="relative">
-        <div className="animate-spin rounded-full h-12 w-12 border-[3px] border-gray-100 border-t-primary-600" />
-        <div className="absolute inset-0 flex items-center justify-center">
-          <Boxes size={16} className="text-primary-600" />
-        </div>
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div><Skeleton className="h-8 w-48" /><Skeleton className="h-4 w-64 mt-2" /></div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {[1,2].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><CardSkeleton /></div>)}
       </div>
     </div>
   );
@@ -108,9 +116,12 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-0.5">Warehouse monitoring overview</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => { setLoading(true); fetchData(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Refresh">
+            <RefreshCw size={16} />
+          </button>
           <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-            Live
+            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+            Auto-refresh 30s
           </div>
           <div className="h-6 w-px bg-gray-200 hidden sm:block" />
           <button onClick={() => handleExport('stock-excel')} disabled={!!exporting}

@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
+import { useConfirm } from '../context/ConfirmContext';
 import { Plus, Search, Edit2, Trash2, X, FolderOpen, Tag } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState, EmptySearch } from '../components/EmptyState';
 
 export default function CategoriesPage() {
   const { hasRole } = useAuth();
+  const toast = useToast();
+  const confirm = useConfirm();
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', description: '', parent_id: '' });
+  const [saving, setSaving] = useState(false);
 
   const isAdmin = hasRole('admin', 'manager');
 
@@ -19,7 +26,9 @@ export default function CategoriesPage() {
     try {
       const res = await api.get('/categories');
       setCategories(res.data);
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      toast('Failed to load categories', 'error');
+    }
     setLoading(false);
   };
 
@@ -33,26 +42,37 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
     try {
       if (editing) {
         await api.put(`/categories/${editing.id}`, form);
+        toast('Category updated successfully', 'success');
       } else {
         await api.post('/categories', form);
+        toast('Category created successfully', 'success');
       }
       resetForm();
       fetchCategories();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error saving category');
+      toast(err.response?.data?.message || 'Error saving category', 'error');
     }
+    setSaving(false);
   };
 
   const handleDelete = async (cat) => {
-    if (!confirm(`Delete "${cat.name}"? This may affect items in this category.`)) return;
+    const result = await confirm({
+      title: 'Delete Category',
+      message: `Are you sure you want to delete "${cat.name}"? This may affect items in this category.`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+    if (!result) return;
     try {
       await api.delete(`/categories/${cat.id}`);
+      toast('Category deleted successfully', 'success');
       fetchCategories();
     } catch (err) {
-      alert(err.response?.data?.message || 'Error deleting category');
+      toast(err.response?.data?.message || 'Error deleting category', 'error');
     }
   };
 
@@ -99,58 +119,71 @@ export default function CategoriesPage() {
 
       {/* Table */}
       <div className="card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Description</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Parent</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Items</th>
-                {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr className="border-b">
-                  <td colSpan={isAdmin ? 5 : 4} className="text-center py-12 text-gray-400">Loading...</td>
+        {loading ? (
+          <div className="p-4">
+            <TableSkeleton rows={5} cols={isAdmin ? 5 : 4} />
+          </div>
+        ) : filtered.length === 0 ? (
+          search ? (
+            <EmptySearch searchTerm={search} onClear={() => setSearch('')} />
+          ) : (
+            <EmptyState
+              icon="categories"
+              title="No categories yet"
+              description="Create your first category to organize your inventory items."
+              action={
+                isAdmin && (
+                  <button onClick={() => { resetForm(); setShowForm(true); }} className="btn-primary gap-2">
+                    <Plus size={16} /> Add Category
+                  </button>
+                )
+              }
+            />
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden sm:table-cell">Description</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell">Parent</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600">Items</th>
+                  {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
                 </tr>
-              ) : filtered.length === 0 ? (
-                <tr className="border-b">
-                  <td colSpan={isAdmin ? 5 : 4} className="text-center py-12 text-gray-400">
-                    {search ? 'No categories found' : 'No categories yet. Create one to get started.'}
-                  </td>
-                </tr>
-              ) : filtered.map((cat) => (
-                <tr key={cat.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2">
-                      <Tag size={14} className="text-indigo-500" />
-                      <span className="font-medium">{cat.name}</span>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{cat.description || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500">{cat.parent?.name || '-'}</td>
-                  <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
-                      {cat.items_count || 0}
-                    </span>
-                  </td>
-                  {isAdmin && (
-                    <td className="px-4 py-3 text-right">
-                      <button onClick={() => startEdit(cat)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
-                        <Edit2 size={14} />
-                      </button>
-                      <button onClick={() => handleDelete(cat)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
-                        <Trash2 size={14} />
-                      </button>
+              </thead>
+              <tbody>
+                {filtered.map((cat) => (
+                  <tr key={cat.id} className="border-b hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2">
+                        <Tag size={14} className="text-indigo-500 flex-shrink-0" />
+                        <span className="font-medium">{cat.name}</span>
+                      </div>
                     </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                    <td className="px-4 py-3 text-gray-500 max-w-xs truncate hidden sm:table-cell">{cat.description || '-'}</td>
+                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{cat.parent?.name || '-'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-50 text-indigo-700">
+                        {cat.items_count || 0}
+                      </span>
+                    </td>
+                    {isAdmin && (
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => startEdit(cat)} className="p-1.5 rounded hover:bg-gray-100 text-gray-500" title="Edit">
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => handleDelete(cat)} className="p-1.5 rounded hover:bg-red-50 text-red-500 ml-1" title="Delete">
+                          <Trash2 size={14} />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {/* Form modal */}
@@ -198,8 +231,10 @@ export default function CategoriesPage() {
                 </select>
               </div>
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={resetForm} className="btn-secondary">Cancel</button>
-                <button type="submit" className="btn-primary">{editing ? 'Update' : 'Create'}</button>
+                <button type="button" onClick={resetForm} className="btn-secondary" disabled={saving}>Cancel</button>
+                <button type="submit" className="btn-primary" disabled={saving}>
+                  {saving ? 'Saving...' : editing ? 'Update' : 'Create'}
+                </button>
               </div>
             </form>
           </div>
