@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { CheckCircle, XCircle, Clock, AlertTriangle } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 
 export default function ApprovalsPage() {
   const { user, hasRole } = useAuth();
@@ -72,9 +74,15 @@ export default function ApprovalsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={7} className="p-4"><TableSkeleton rows={5} cols={isManager ? 7 : 6} /></td></tr>
               ) : approvals.length === 0 ? (
-                <tr><td colSpan={7} className="text-center py-12 text-gray-400">No approval requests</td></tr>
+                <tr><td colSpan={7}>
+                  <EmptyState
+                    icon="approvals"
+                    title="No approval requests"
+                    description="Approval requests for outgoing stock will appear here."
+                  />
+                </td></tr>
               ) : approvals.map((a) => (
                 <tr key={a.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3">
