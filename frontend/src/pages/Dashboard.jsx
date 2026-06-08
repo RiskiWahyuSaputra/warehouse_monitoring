@@ -242,9 +242,9 @@ export default function DashboardPage() {
 
       {/* Early warnings */}
       {warnings.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-l-red-400">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-l-red-400 dark:bg-gray-900 dark:border-gray-800">
           <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-lg bg-red-50 text-red-600">
+            <div className="p-1.5 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">
               <AlertTriangle size={16} />
             </div>
             <div>
@@ -254,7 +254,7 @@ export default function DashboardPage() {
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {warnings.slice(0, 6).map((w, i) => (
-              <div key={i} className="flex items-center justify-between p-3.5 bg-red-50/70 rounded-xl border border-red-100/50">
+              <div key={i} className="flex items-center justify-between p-3.5 bg-red-50/70 rounded-xl border border-red-100/50 dark:bg-red-900/20 dark:border-red-900/30">
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-800 truncate dark:text-gray-200">{w.item.name}</p>
                   <p className="text-xs text-gray-400 dark:text-gray-500">SKU: {w.item.sku}</p>

@@ -89,17 +89,17 @@ export default function ForecastsPage() {
 
       {/* Early warnings */}
       {warnings.length > 0 && (
-        <div className="card p-4 border-l-4 border-l-red-500">
-          <h3 className="text-sm font-semibold text-red-600 mb-3 flex items-center gap-2">
+        <div className="card p-4 border-l-4 border-l-red-500 dark:bg-gray-900">
+          <h3 className="text-sm font-semibold text-red-600 mb-3 flex items-center gap-2 dark:text-red-400">
             <AlertTriangle size={16} /> Stockout Warnings ({warnings.length})
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {warnings.slice(0, 6).map((w, i) => (
-              <div key={i} className="p-3 bg-red-50 rounded-lg">
-                <p className="text-sm font-medium">{w.item.name}</p>
+              <div key={i} className="p-3 bg-red-50 rounded-lg dark:bg-red-900/20">
+                <p className="text-sm font-medium dark:text-gray-200">{w.item.name}</p>
                 <div className="flex justify-between mt-1">
-                  <span className="text-xs text-gray-500">Stock: {w.current_stock}</span>
-                  <span className="text-xs text-red-600 font-medium">~{w.days_until_stockout}d left</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Stock: {w.current_stock}</span>
+                  <span className="text-xs text-red-600 font-medium dark:text-red-400">~{w.days_until_stockout}d left</span>
                 </div>
               </div>
             ))}
