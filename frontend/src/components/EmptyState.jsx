@@ -12,6 +12,7 @@ const iconMap = {
   users: Users,
   inventory: Package,
   movements: ArrowRightLeft,
+  forecasts: TrendingUp,
 };
 
 export function EmptyState({

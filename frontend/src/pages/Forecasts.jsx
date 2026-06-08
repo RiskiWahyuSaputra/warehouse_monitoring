@@ -3,6 +3,8 @@ import api, { downloadFile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import { TrendingUp, AlertTriangle, RefreshCw, FileSpreadsheet, FileText } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 
 export default function ForecastsPage() {
   const { hasRole } = useAuth();
@@ -121,9 +123,23 @@ export default function ForecastsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={6} className="p-4"><TableSkeleton rows={5} cols={6} /></td></tr>
               ) : forecasts.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">No forecasts yet. Click Generate to create predictions.</td></tr>
+                <tr><td colSpan={6}>
+                  <EmptyState
+                    icon="forecasts"
+                    title="No forecasts yet"
+                    description="Click Generate to create AI-powered stock predictions."
+                    action={
+                      isAdmin && (
+                        <button onClick={handleGenerate} disabled={generating} className="btn-primary gap-2">
+                          <RefreshCw size={16} className={generating ? 'animate-spin' : ''} />
+                          {generating ? 'Generating...' : 'Generate'}
+                        </button>
+                      )
+                    }
+                  />
+                </td></tr>
               ) : forecasts.map((f) => (
                 <tr key={f.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{f.inventory_item?.name || '-'}</td>
