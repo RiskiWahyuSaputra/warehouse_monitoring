@@ -139,12 +139,11 @@ export default function MovementsPage() {
                 </tr>
               ))}
             </tbody>
-            </tbody>
           </table>
         </div>
         {meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-            <p className="text-xs text-gray-500">Page {meta.current_page} of {meta.last_page}</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Page {meta.current_page} of {meta.last_page}</p>
             <div className="flex gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary btn-sm">Prev</button>
               <button onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="btn-secondary btn-sm">Next</button>
