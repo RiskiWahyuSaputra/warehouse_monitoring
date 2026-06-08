@@ -111,14 +111,14 @@ export default function ForecastsPage() {
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Item</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Predicted</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Low</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">High</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">MAPE</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Target Date</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Item</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Predicted</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Low</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">High</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">MAPE</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Target Date</th>
               </tr>
             </thead>
             <tbody>
@@ -141,15 +141,15 @@ export default function ForecastsPage() {
                   />
                 </td></tr>
               ) : forecasts.map((f) => (
-                <tr key={f.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{f.inventory_item?.name || '-'}</td>
-                  <td className="px-4 py-3 text-right font-medium">{f.predicted_quantity}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{f.confidence_low}</td>
-                  <td className="px-4 py-3 text-right text-gray-500">{f.confidence_high}</td>
+                <tr key={f.id} className="border-b hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
+                  <td className="px-4 py-3 font-medium dark:text-gray-200">{f.inventory_item?.name || '-'}</td>
+                  <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{f.predicted_quantity}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{f.confidence_low}</td>
+                  <td className="px-4 py-3 text-right text-gray-500 dark:text-gray-400">{f.confidence_high}</td>
                   <td className="px-4 py-3 text-right">
                     {f.mape ? <span className={f.mape < 20 ? 'badge-success' : f.mape < 50 ? 'badge-warning' : 'badge-danger'}>{f.mape}%</span> : '-'}
                   </td>
-                  <td className="px-4 py-3 text-gray-500">{f.target_date}</td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400">{f.target_date}</td>
                 </tr>
               ))}
             </tbody>

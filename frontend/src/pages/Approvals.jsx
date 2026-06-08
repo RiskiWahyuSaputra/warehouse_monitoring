@@ -54,22 +54,22 @@ export default function ApprovalsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Approval Requests</h1>
-        <p className="text-gray-500">Review and decide on outgoing stock requests</p>
+        <h1 className="text-2xl font-bold dark:text-gray-100">Approval Requests</h1>
+        <p className="text-gray-500 dark:text-gray-400">Review and decide on outgoing stock requests</p>
       </div>
 
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Item</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Requester</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Qty</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Location</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Status</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
-                {isManager && <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>}
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Item</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Requester</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Qty</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Location</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Status</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Date</th>
+                {isManager && <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -84,7 +84,7 @@ export default function ApprovalsPage() {
                   />
                 </td></tr>
               ) : approvals.map((a) => (
-                <tr key={a.id} className="border-b hover:bg-gray-50">
+                <tr key={a.id} className="border-b hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-3">
                     <p className="font-medium">{a.item?.name || '-'}</p>
                     <p className="text-xs text-gray-400">{a.item?.sku}</p>
@@ -118,8 +118,8 @@ export default function ApprovalsPage() {
           </table>
         </div>
         {meta.last_page > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
-            <p className="text-xs text-gray-500">Page {meta.current_page} of {meta.last_page}</p>
+          <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50 dark:bg-gray-800/50 dark:border-gray-700">
+            <p className="text-xs text-gray-500 dark:text-gray-400">Page {meta.current_page} of {meta.last_page}</p>
             <div className="flex gap-1">
               <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary btn-sm">Prev</button>
               <button onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="btn-secondary btn-sm">Next</button>
