@@ -249,7 +249,7 @@ export default function BarcodePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-2xl font-bold flex items-center gap-2 dark:text-gray-100">
             <ScanBarcode size={24} /> Barcode Scanner
           </h1>
           <p className="text-gray-500 text-sm">Scan or type barcode to lookup inventory items</p>

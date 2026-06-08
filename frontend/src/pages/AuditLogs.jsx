@@ -152,7 +152,7 @@ export default function AuditLogsPage() {
       {/* Pagination */}
       {meta.last_page > 1 && (
         <div className="flex items-center justify-between">
-          <p className="text-xs text-gray-500">Page {meta.current_page} of {meta.last_page}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">Page {meta.current_page} of {meta.last_page}</p>
           <div className="flex gap-1">
             <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="btn-secondary btn-sm">Prev</button>
             <button onClick={() => setPage((p) => Math.min(meta.last_page, p + 1))} disabled={page >= meta.last_page} className="btn-secondary btn-sm">Next</button>

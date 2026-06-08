@@ -62,12 +62,12 @@ export default function UsersPage() {
 
       <div className="card overflow-hidden">
         <table className="w-full text-sm">
-          <thead className="bg-gray-50 border-b">
+          <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700"
             <tr>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Name</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Email</th>
-              <th className="text-left px-4 py-3 font-medium text-gray-600">Role</th>
-              <th className="text-right px-4 py-3 font-medium text-gray-600">Actions</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Name</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Email</th>
+              <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Role</th>
+              <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -75,8 +75,8 @@ export default function UsersPage() {
               <tr><td colSpan={4} className="text-center py-12 text-gray-400">Loading...</td></tr>
             ) : users.map((u) => (
               <tr key={u.id} className="border-b hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium">{u.name}</td>
-                <td className="px-4 py-3 text-gray-600">{u.email}</td>
+                <td className="px-4 py-3 font-medium dark:text-gray-200">{u.name}</td>
+                <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{u.email}</td>
                 <td className="px-4 py-3"><span className="badge-info">{u.role?.name || '-'}</span></td>
                 <td className="px-4 py-3 text-right">
                   <button onClick={() => { setForm({ name: u.name, email: u.email, password: '', role_id: u.role_id }); setEditing(u); setShowForm(true); }} className="p-1.5 rounded hover:bg-gray-100 text-gray-500"><Edit2 size={14} /></button>
