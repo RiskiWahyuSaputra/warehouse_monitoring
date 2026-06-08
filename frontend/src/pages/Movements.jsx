@@ -103,14 +103,14 @@ export default function MovementsPage() {
       <div className="card overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b">
+            <thead className="bg-gray-50 border-b dark:bg-gray-800/50 dark:border-gray-700">
               <tr>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Item</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Type</th>
-                <th className="text-right px-4 py-3 font-medium text-gray-600">Qty</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Location</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">User</th>
-                <th className="text-left px-4 py-3 font-medium text-gray-600">Date</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Item</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Type</th>
+                <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Qty</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Location</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">User</th>
+                <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Date</th>
               </tr>
             </thead>
             <tbody>
@@ -125,19 +125,20 @@ export default function MovementsPage() {
                   />
                 </td></tr>
               ) : movements.map((m) => (
-                <tr key={m.id} className="border-b hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium">{m.item?.name || '-'}</td>
+                <tr key={m.id} className="border-b hover:bg-gray-50 dark:border-gray-800 dark:hover:bg-gray-800/50">
+                  <td className="px-4 py-3 font-medium dark:text-gray-200">{m.item?.name || '-'}</td>
                   <td className="px-4 py-3">
                     {m.type === 'in' && <span className="badge-success flex items-center gap-1 w-fit"><ArrowDownCircle size={12} /> In</span>}
                     {m.type === 'out' && <span className="badge-danger flex items-center gap-1 w-fit"><ArrowUpCircle size={12} /> Out</span>}
                     {m.type === 'adjustment' && <span className="badge-warning flex items-center gap-1 w-fit"><RefreshCw size={12} /> Adj</span>}
                   </td>
-                  <td className="px-4 py-3 text-right font-medium">{m.quantity}</td>
-                  <td className="px-4 py-3 text-gray-600">{m.location ? `${m.location.zone}-${m.location.rack}` : '-'}</td>
-                  <td className="px-4 py-3 text-gray-600">{m.user?.name || '-'}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs">{new Date(m.created_at).toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right font-medium dark:text-gray-200">{m.quantity}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{m.location ? `${m.location.zone}-${m.location.rack}` : '-'}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{m.user?.name || '-'}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs dark:text-gray-500">{new Date(m.created_at).toLocaleString()}</td>
                 </tr>
               ))}
+            </tbody>
             </tbody>
           </table>
         </div>
