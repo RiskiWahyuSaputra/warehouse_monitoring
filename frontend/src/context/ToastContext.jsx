@@ -61,11 +61,11 @@ function ToastItem({ toast, onClose }) {
 
   return (
     <div
-      className={`pointer-events-auto flex items-start gap-3 px-4 py-3 bg-white rounded-xl shadow-lg border border-gray-100 border-l-4 ${borders[toast.type]} animate-slide-in`}
+      className={`pointer-events-auto flex items-start gap-3 px-4 py-3 bg-white rounded-xl shadow-lg border border-gray-100 border-l-4 dark:bg-gray-800 dark:border-gray-700 ${borders[toast.type]} animate-slide-in`}
     >
       {icons[toast.type]}
-      <p className="text-sm text-gray-700 flex-1">{toast.message}</p>
-      <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-100 text-gray-400 flex-shrink-0">
+      <p className="text-sm text-gray-700 flex-1 dark:text-gray-200">{toast.message}</p>
+      <button onClick={onClose} className="p-0.5 rounded hover:bg-gray-100 text-gray-400 flex-shrink-0 dark:hover:bg-gray-700">
         <X size={14} />
       </button>
     </div>
