@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ArrowDownCircle, ArrowUpCircle, RefreshCw, ArrowRightLeft, X, Plus } from 'lucide-react';
+import { TableSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
 
 export default function MovementsPage() {
   const { hasRole } = useAuth();
@@ -113,9 +115,15 @@ export default function MovementsPage() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={6} className="p-4"><TableSkeleton rows={5} cols={6} /></td></tr>
               ) : movements.length === 0 ? (
-                <tr><td colSpan={6} className="text-center py-12 text-gray-400">No movements recorded</td></tr>
+                <tr><td colSpan={6}>
+                  <EmptyState
+                    icon="movements"
+                    title="No movements recorded"
+                    description="Record stock movements to track inventory changes over time."
+                  />
+                </td></tr>
               ) : movements.map((m) => (
                 <tr key={m.id} className="border-b hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium">{m.item?.name || '-'}</td>

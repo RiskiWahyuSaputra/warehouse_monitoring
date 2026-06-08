@@ -1,4 +1,4 @@
-import { Inbox, Search, FolderOpen, MapPin, Truck, FileText, ClipboardCheck, Bell, Users, Package } from 'lucide-react';
+import { Inbox, Search, FolderOpen, MapPin, Truck, FileText, ClipboardCheck, Bell, Users, Package, ArrowRightLeft } from 'lucide-react';
 
 const iconMap = {
   default: Inbox,
@@ -11,6 +11,7 @@ const iconMap = {
   notifications: Bell,
   users: Users,
   inventory: Package,
+  movements: ArrowRightLeft,
 };
 
 export function EmptyState({
