@@ -3,7 +3,8 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
-import { Plus, Search, Edit2, Trash2, X, Package, Tag } from 'lucide-react';
+import { useGlobalSearch } from '../context/GlobalSearchContext';
+import { Plus, Search, Edit2, Trash2, X, Package, Tag, SlidersHorizontal } from 'lucide-react';
 import { TableSkeleton } from '../components/Skeleton';
 import { EmptyState, EmptySearch } from '../components/EmptyState';
 
@@ -11,6 +12,7 @@ export default function InventoryPage() {
   const { hasRole } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
+  const { query: globalQuery, activeFilters, activeFilterCount } = useGlobalSearch();
   const [items, setItems] = useState([]);
   const [categories, setCategories] = useState([]);
   const [meta, setMeta] = useState({});
@@ -24,10 +26,18 @@ export default function InventoryPage() {
 
   const isAdmin = hasRole('admin', 'manager');
 
+  // Sync global search query to local search
+  useEffect(() => {
+    if (globalQuery !== search) setSearch(globalQuery);
+  }, [globalQuery]);
+
   const fetchItems = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, per_page: 10, search });
+      if (activeFilters.categoryId) params.set('category_id', activeFilters.categoryId);
+      if (activeFilters.dateFrom) params.set('date_from', activeFilters.dateFrom);
+      if (activeFilters.dateTo) params.set('date_to', activeFilters.dateTo);
       const res = await api.get(`/inventory-items?${params}`);
       setItems(res.data.data);
       setMeta({ current_page: res.data.current_page, last_page: res.data.last_page, total: res.data.total });
@@ -40,7 +50,7 @@ export default function InventoryPage() {
   useEffect(() => {
     fetchItems();
     api.get('/categories').then((r) => setCategories(r.data.data || r.data)).catch(() => {});
-  }, [page, search]);
+  }, [page, search, activeFilters]);
 
   const resetForm = () => {
     setForm({ name: '', sku: '', description: '', category_id: '', barcode: '', min_stock: 0, price: 0 });
@@ -98,10 +108,26 @@ export default function InventoryPage() {
         )}
       </div>
 
-      <div className="card p-3">
+      <div className="card p-3 space-y-3">
         <div className="relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input className="input pl-9" placeholder="Search by name, SKU..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+        </div>
+        {/* Filters row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            className="input w-auto text-xs py-1.5"
+            value={activeFilters.categoryId}
+            onChange={(e) => setActiveFilters({ ...activeFilters, categoryId: e.target.value })}
+          >
+            <option value="">All Categories</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          {activeFilterCount > 0 && (
+            <span className="text-[10px] font-medium text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full dark:bg-primary-900/30 dark:text-primary-400">
+              {activeFilterCount} filter{activeFilterCount > 1 ? 's' : ''} active
+            </span>
+          )}
         </div>
       </div>
 

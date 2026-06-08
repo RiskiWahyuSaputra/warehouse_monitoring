@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
+import { useGlobalSearch } from '../context/GlobalSearchContext';
 import { Plus, Search, Edit2, Trash2, X, Truck, Star, Mail, Phone, MapPin } from 'lucide-react';
 import { TableSkeleton } from '../components/Skeleton';
 import { EmptyState, EmptySearch } from '../components/EmptyState';
@@ -11,6 +12,7 @@ export default function SuppliersPage() {
   const { hasRole } = useAuth();
   const toast = useToast();
   const confirm = useConfirm();
+  const { query: globalQuery, activeFilters } = useGlobalSearch();
   const [suppliers, setSuppliers] = useState([]);
   const [meta, setMeta] = useState({});
   const [loading, setLoading] = useState(true);
@@ -23,10 +25,17 @@ export default function SuppliersPage() {
 
   const isAdmin = hasRole('admin', 'manager');
 
+  // Sync global search
+  useEffect(() => {
+    if (globalQuery !== search) setSearch(globalQuery);
+  }, [globalQuery]);
+
   const fetchSuppliers = async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page, search });
+      if (activeFilters.dateFrom) params.set('date_from', activeFilters.dateFrom);
+      if (activeFilters.dateTo) params.set('date_to', activeFilters.dateTo);
       const res = await api.get(`/suppliers?${params}`);
       setSuppliers(res.data.data);
       setMeta({ current_page: res.data.current_page, last_page: res.data.last_page, total: res.data.total });
@@ -36,7 +45,7 @@ export default function SuppliersPage() {
     setLoading(false);
   };
 
-  useEffect(() => { fetchSuppliers(); }, [page, search]);
+  useEffect(() => { fetchSuppliers(); }, [page, search, activeFilters]);
 
   const resetForm = () => {
     setForm({ name: '', contact_person: '', email: '', phone: '', address: '', performance_score: '' });

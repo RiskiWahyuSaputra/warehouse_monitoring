@@ -1,18 +1,22 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ArrowDownCircle, ArrowUpCircle, RefreshCw, ArrowRightLeft, X, Plus } from 'lucide-react';
+import { useGlobalSearch } from '../context/GlobalSearchContext';
+import { ArrowDownCircle, ArrowUpCircle, RefreshCw, ArrowRightLeft, X, Plus, Search } from 'lucide-react';
 import { TableSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 
 export default function MovementsPage() {
   const { hasRole } = useAuth();
+  const { query: globalQuery, activeFilters, activeFilterCount } = useGlobalSearch();
   const [movements, setMovements] = useState([]);
+  const [allMovements, setAllMovements] = useState([]);
   const [meta, setMeta] = useState({});
   const [items, setItems] = useState([]);
   const [locations, setLocations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [search, setSearch] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showTransfer, setShowTransfer] = useState(false);
   const [showBatch, setShowBatch] = useState(false);
@@ -21,17 +25,27 @@ export default function MovementsPage() {
   const [transferForm, setTransferForm] = useState({ inventory_item_id: '', from_location_id: '', to_location_id: '', quantity: 1, remarks: '' });
   const [batchForm, setBatchForm] = useState({ movements: [{ inventory_item_id: '', location_id: '', type: 'in', quantity: 1 }] });
 
+  // Sync global search
+  useEffect(() => {
+    if (globalQuery !== search) setSearch(globalQuery);
+  }, [globalQuery]);
+
   const fetchMovements = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/inventory/movements?page=${page}`);
-      setMovements(res.data.data);
+      const params = new URLSearchParams({ page, per_page: 20 });
+      if (search) params.set('search', search);
+      if (activeFilters.type) params.set('type', activeFilters.type);
+      if (activeFilters.dateFrom) params.set('date_from', activeFilters.dateFrom);
+      if (activeFilters.dateTo) params.set('date_to', activeFilters.dateTo);
+      const res = await api.get(`/inventory/movements?${params}`);
+      setAllMovements(res.data.data);
       setMeta({ current_page: res.data.current_page, last_page: res.data.last_page });
     } catch {}
     setLoading(false);
   };
 
-  useEffect(() => { fetchMovements(); }, [page]);
+  useEffect(() => { fetchMovements(); }, [page, search, activeFilters]);
   useEffect(() => {
     Promise.all([api.get('/inventory-items?per_page=100'), api.get('/locations')]).then(([i, l]) => {
       setItems(i.data.data || i.data);

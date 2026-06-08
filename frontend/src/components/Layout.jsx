@@ -1,12 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useGlobalSearch } from '../context/GlobalSearchContext';
 import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
-  Users, BarChart3, ScanBarcode, LogOut, Menu, X, Bell, Tag, MapPin, Truck, FileText, Sun, Moon
+  Users, BarChart3, ScanBarcode, LogOut, Menu, X, Bell, Tag, MapPin, Truck, FileText, Sun, Moon, Search
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import GlobalSearchBar from '../components/GlobalSearchBar';
 
 const navItems = [
   { to: '/', icon: LayoutDashboard, label: 'Dashboard', roles: ['admin', 'manager', 'staff'] },
@@ -26,6 +28,7 @@ const navItems = [
 export default function Layout({ children }) {
   const { user, logout, hasRole } = useAuth();
   const { dark, toggle: toggleDark } = useTheme();
+  const { setIsOpen, activeFilterCount } = useGlobalSearch();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -88,6 +91,22 @@ export default function Layout({ children }) {
             <Menu size={20} />
           </button>
           <div className="flex items-center gap-3 ml-auto">
+            {/* Global search trigger */}
+            <button
+              onClick={() => setIsOpen(true)}
+              className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 text-gray-400 text-xs hover:bg-gray-100 transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500 dark:hover:bg-gray-700 min-w-[200px]"
+            >
+              <Search size={14} />
+              <span className="flex-1 text-left">Search...</span>
+              <kbd className="text-[9px] bg-gray-200 px-1 py-0.5 rounded dark:bg-gray-700 dark:text-gray-500">⌘K</kbd>
+            </button>
+            <button
+              onClick={() => setIsOpen(true)}
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400"
+            >
+              <Search size={18} />
+            </button>
+
             {/* Dark mode toggle */}
             <button
               onClick={toggleDark}
@@ -128,6 +147,9 @@ export default function Layout({ children }) {
           {children}
         </main>
       </div>
+
+      {/* Global search overlay */}
+      <GlobalSearchBar />
     </div>
   );
 }
