@@ -25,11 +25,11 @@ export function EmptyState({
 
   return (
     <div className="text-center py-12 px-4">
-      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
-        <Icon size={28} className="text-gray-300" />
+      <div className="w-16 h-16 rounded-2xl bg-gray-50 flex items-center justify-center mx-auto mb-4 dark:bg-gray-800">
+        <Icon size={28} className="text-gray-300 dark:text-gray-600" />
       </div>
-      <h3 className="text-sm font-medium text-gray-500">{title}</h3>
-      <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto">{description}</p>
+      <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400">{title}</h3>
+      <p className="text-xs text-gray-400 mt-1 max-w-xs mx-auto dark:text-gray-500">{description}</p>
       {action && <div className="mt-4">{action}</div>}
     </div>
   );
