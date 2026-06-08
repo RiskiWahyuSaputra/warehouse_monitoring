@@ -95,7 +95,7 @@ export default function NotificationsPage() {
             return (
               <div
                 key={n.id}
-                className={`card p-4 flex items-start gap-3 transition-colors ${!n.read_at ? 'border-l-4 border-l-primary-500 bg-primary-50/30' : ''}`}
+                className={`card p-4 flex items-start gap-3 transition-colors ${!n.read_at ? 'border-l-4 border-l-primary-500 bg-primary-50/30 dark:bg-primary-900/10' : ''}`}
               >
                 <div className={`p-2 rounded-lg flex-shrink-0 ${color}`}>
                   <Icon size={18} />
@@ -103,21 +103,21 @@ export default function NotificationsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <p className={`text-sm font-medium ${!n.read_at ? 'text-gray-900' : 'text-gray-700'}`}>
+                      <p className={`text-sm font-medium ${!n.read_at ? 'text-gray-900 dark:text-gray-100' : 'text-gray-700 dark:text-gray-300'}`}>
                         {n.title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                      <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">{n.message}</p>
                     </div>
                     {!n.read_at && (
                       <button
                         onClick={() => markAsRead(n.id)}
-                        className="text-xs text-primary-600 hover:text-primary-700 flex-shrink-0 font-medium"
+                        className="text-xs text-primary-600 hover:text-primary-700 flex-shrink-0 font-medium dark:text-primary-400 dark:hover:text-primary-300"
                       >
                         Mark read
                       </button>
                     )}
                   </div>
-                  <p className="text-[11px] text-gray-400 mt-1.5">
+                  <p className="text-[11px] text-gray-400 mt-1.5 dark:text-gray-500">
                     {new Date(n.created_at).toLocaleString()}
                   </p>
                 </div>
