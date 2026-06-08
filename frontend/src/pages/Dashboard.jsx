@@ -9,8 +9,8 @@ const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="bg-white/90 backdrop-blur-md border border-gray-100 shadow-xl rounded-xl px-4 py-3">
-      <p className="text-xs font-semibold text-gray-500 mb-1">{label}</p>
+    <div className="bg-white/90 backdrop-blur-md border border-gray-100 shadow-xl rounded-xl px-4 py-3 dark:bg-gray-800/90 dark:border-gray-700">
+      <p className="text-xs font-semibold text-gray-500 mb-1 dark:text-gray-400">{label}</p>
       {payload.map((p, i) => (
         <p key={i} className="text-sm font-bold" style={{ color: p.color }}>{p.name}: {p.value.toLocaleString()}</p>
       ))}
@@ -22,7 +22,7 @@ function PieTooltip({ active, payload }) {
   if (!active || !payload?.length) return null;
   const d = payload[0];
   return (
-    <div className="bg-white/90 backdrop-blur-md border border-gray-100 shadow-xl rounded-xl px-4 py-3">
+    <div className="bg-white/90 backdrop-blur-md border border-gray-100 shadow-xl rounded-xl px-4 py-3 dark:bg-gray-800/90 dark:border-gray-700">
       <p className="text-sm font-bold">{d.name}</p>
       <p className="text-xs text-gray-500">{d.value} items ({d.payload?.percent ? (d.payload.percent * 100).toFixed(0) : 0}%)</p>
     </div>
@@ -31,7 +31,7 @@ function PieTooltip({ active, payload }) {
 
 function PieLabel({ name, percent }) {
   return percent > 0.05 ? (
-    <text fill="#374151" fontSize={11} fontWeight={600}>
+    <text fill="#374151" fontSize={11} fontWeight={600} className="dark:fill-gray-300">
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   ) : null;
@@ -100,7 +100,7 @@ export default function DashboardPage() {
         {[1,2,3,4].map(i => <StatCardSkeleton key={i} />)}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {[1,2].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5"><CardSkeleton /></div>)}
+        {[1,2].map(i => <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 dark:bg-gray-900 dark:border-gray-800"><CardSkeleton /></div>)}
       </div>
     </div>
   );
@@ -112,38 +112,38 @@ export default function DashboardPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-0.5">Warehouse monitoring overview</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+          <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-400">Warehouse monitoring overview</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => { setLoading(true); fetchData(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600" title="Refresh">
+          <button onClick={() => { setLoading(true); fetchData(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 dark:hover:bg-gray-800 dark:text-gray-500 dark:hover:text-gray-300" title="Refresh">
             <RefreshCw size={16} />
           </button>
-          <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200">
+          <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             Auto-refresh 30s
           </div>
-          <div className="h-6 w-px bg-gray-200 hidden sm:block" />
+          <div className="h-6 w-px bg-gray-200 hidden sm:block dark:bg-gray-700" />
           <button onClick={() => handleExport('stock-excel')} disabled={!!exporting}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Export Stock Report (CSV)">
             <FileSpreadsheet size={14} className="text-green-600" />
             Stock CSV
           </button>
           <button onClick={() => handleExport('stock-pdf')} disabled={!!exporting}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Export Stock Report (PDF-HTML)">
             <FileText size={14} className="text-red-500" />
             Stock PDF
           </button>
           <button onClick={() => handleExport('movement-excel')} disabled={!!exporting}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Export Movement Report (CSV)">
             <FileSpreadsheet size={14} className="text-green-600" />
             Move CSV
           </button>
           <button onClick={() => handleExport('forecast-excel')} disabled={!!exporting}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
             title="Export Forecast Report (CSV)">
             <FileSpreadsheet size={14} className="text-green-600" />
             Forecast CSV
@@ -162,9 +162,9 @@ export default function DashboardPage() {
       {/* Charts row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Category distribution */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Category Distribution</h3>
-          <p className="text-xs text-gray-400 mb-4">Items grouped by category</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Category Distribution</h3>
+          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Items grouped by category</p>
           {charts?.categories?.length > 0 ? (
             <div className="flex items-center gap-4">
               <ResponsiveContainer width="60%" height={260}>
@@ -179,19 +179,19 @@ export default function DashboardPage() {
                 {charts.categories.map((c, i) => (
                   <div key={i} className="flex items-center gap-2 text-xs">
                     <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="text-gray-600 truncate flex-1">{c.name}</span>
-                    <span className="font-semibold text-gray-800">{c.count}</span>
+                    <span className="text-gray-600 truncate flex-1 dark:text-gray-400">{c.name}</span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{c.count}</span>
                   </div>
                 ))}
               </div>
             </div>
-          ) : <p className="text-gray-400 text-center py-12">No data</p>}
+          ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
         </div>
 
         {/* 30-day trends */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">30-Day Stock Trends</h3>
-          <p className="text-xs text-gray-400 mb-4">Daily stock in / out movements</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">30-Day Stock Trends</h3>
+          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Daily stock in / out movements</p>
           {charts?.trends?.length > 0 ? (
             <ResponsiveContainer width="100%" height={260}>
               <AreaChart data={charts.trends}>
@@ -213,15 +213,15 @@ export default function DashboardPage() {
                 <Area type="monotone" dataKey="out" stroke="#ef4444" strokeWidth={2.5} fill="url(#outGradient)" name="Out" dot={false} activeDot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }} />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <p className="text-gray-400 text-center py-12">No data</p>}
+          ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
         </div>
       </div>
 
       {/* Top moving items */}
       {charts?.top_moving_items?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Top Moving Items</h3>
-          <p className="text-xs text-gray-400 mb-4">Highest stock-out quantities in the last 30 days</p>
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
+          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Top Moving Items</h3>
+          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Highest stock-out quantities in the last 30 days</p>
           <ResponsiveContainer width="100%" height={220}>
             <BarChart data={charts.top_moving_items} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
               <defs>
@@ -248,20 +248,20 @@ export default function DashboardPage() {
               <AlertTriangle size={16} />
             </div>
             <div>
-              <h3 className="text-sm font-semibold text-red-700">Early Stockout Warnings</h3>
-              <p className="text-xs text-gray-400">Items predicted to run out within 7 days</p>
+              <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Early Stockout Warnings</h3>
+              <p className="text-xs text-gray-400 dark:text-gray-500">Items predicted to run out within 7 days</p>
             </div>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {warnings.slice(0, 6).map((w, i) => (
               <div key={i} className="flex items-center justify-between p-3.5 bg-red-50/70 rounded-xl border border-red-100/50">
                 <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate">{w.item.name}</p>
-                  <p className="text-xs text-gray-400">SKU: {w.item.sku}</p>
+                  <p className="text-sm font-medium text-gray-800 truncate dark:text-gray-200">{w.item.name}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">SKU: {w.item.sku}</p>
                 </div>
                 <div className="text-right flex-shrink-0 ml-3">
-                  <p className="text-sm font-bold text-red-600">{w.current_stock}</p>
-                  <p className="text-[11px] text-gray-400">~{w.days_until_stockout}d left</p>
+                  <p className="text-sm font-bold text-red-600 dark:text-red-400">{w.current_stock}</p>
+                  <p className="text-[11px] text-gray-400 dark:text-gray-500">~{w.days_until_stockout}d left</p>
                 </div>
               </div>
             ))}
@@ -284,12 +284,12 @@ function StatCard({ icon: Icon, label, value, trend, color }) {
   const c = colors[color] || colors.indigo;
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all hover:-translate-y-0.5">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-all hover:-translate-y-0.5 dark:bg-gray-900 dark:border-gray-800">
       <div className="flex items-start justify-between">
         <div className="space-y-1">
-          <p className="text-2xl font-bold text-gray-900 tracking-tight">{value.toLocaleString()}</p>
-          <p className="text-xs text-gray-500">{label}</p>
-          {trend && <p className="text-[11px] font-medium text-gray-400">{trend}</p>}
+          <p className="text-2xl font-bold text-gray-900 tracking-tight dark:text-gray-100">{value.toLocaleString()}</p>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+          {trend && <p className="text-[11px] font-medium text-gray-400 dark:text-gray-500">{trend}</p>}
         </div>
         <div className={`p-3 rounded-xl ${c.bg}`}>
           <Icon size={20} className={c.icon} />
