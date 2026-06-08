@@ -31,7 +31,12 @@ function PieTooltip({ active, payload }) {
 
 function PieLabel({ name, percent }) {
   return percent > 0.05 ? (
-    <text fill="#374151" fontSize={11} fontWeight={600} className="dark:fill-gray-300">
+    <text
+      fill="#374151"
+      fontSize={11}
+      fontWeight={600}
+      style={{ fill: 'var(--pie-label-fill, #374151)' }}
+    >
       {`${(percent * 100).toFixed(0)}%`}
     </text>
   ) : null;
@@ -205,10 +210,10 @@ export default function DashboardPage() {
                     <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} tickFormatter={(v) => v?.slice(5) || ''} />
                 <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} />
+                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(107, 114, 128, 0.3)' }} />
                 <Area type="monotone" dataKey="in" stroke="#10b981" strokeWidth={2.5} fill="url(#inGradient)" name="In" dot={false} activeDot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} />
                 <Area type="monotone" dataKey="out" stroke="#ef4444" strokeWidth={2.5} fill="url(#outGradient)" name="Out" dot={false} activeDot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }} />
               </AreaChart>
@@ -230,10 +235,10 @@ export default function DashboardPage() {
                   <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
               <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: '#f9fafb' }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.15)' }} />
               <Bar dataKey="total_out" fill="url(#barGradient)" name="Out Qty" radius={[6, 6, 0, 0]} maxBarSize={40} />
             </BarChart>
           </ResponsiveContainer>
