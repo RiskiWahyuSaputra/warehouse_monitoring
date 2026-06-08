@@ -55,10 +55,10 @@ function ConfirmDialog({ open, title, message, confirmText, cancelText, variant,
             <AlertTriangle size={20} />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-            <p className="text-sm text-gray-500 mt-1">{message}</p>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
+            <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">{message}</p>
           </div>
-          <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100 text-gray-400 flex-shrink-0">
+          <button onClick={onCancel} className="p-1 rounded hover:bg-gray-100 text-gray-400 flex-shrink-0 dark:hover:bg-gray-700">
             <X size={16} />
           </button>
         </div>
