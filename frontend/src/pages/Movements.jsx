@@ -240,7 +240,7 @@ export default function MovementsPage() {
         <Modal title="Batch Movements" onClose={() => setShowBatch(false)}>
           <form onSubmit={handleBatch} className="space-y-4">
             {batchForm.movements.map((m, idx) => (
-              <div key={idx} className="grid grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg">
+              <div key={idx} className="grid grid-cols-4 gap-2 p-3 bg-gray-50 rounded-lg dark:bg-gray-800/50">
                 <select className="input" value={m.inventory_item_id} onChange={(e) => { const ms = [...batchForm.movements]; ms[idx].inventory_item_id = e.target.value; setBatchForm({ movements: ms }); }} required>
                   <option value="">Item...</option>
                   {items.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
