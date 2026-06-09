@@ -1,7 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api, { downloadFile } from '../services/api';
-import { TrendingUp, TrendingDown, Package, AlertTriangle, ClipboardCheck, BarChart3, Boxes, Download, FileSpreadsheet, FileText, RefreshCw } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { useDashboard } from '../context/DashboardContext';
+import { TrendingUp, TrendingDown, Package, AlertTriangle, ClipboardCheck, BarChart3, Boxes, Download, FileSpreadsheet, FileText, RefreshCw, Settings2 } from 'lucide-react';
 import { Skeleton, StatCardSkeleton, CardSkeleton } from '../components/Skeleton';
+import { EmptyState } from '../components/EmptyState';
+import DashboardCustomizeModal from '../components/DashboardCustomize';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { DraggableWidget } from '../components/DashboardWidget';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
@@ -43,12 +50,42 @@ function PieLabel({ name, percent }) {
 }
 
 export default function DashboardPage() {
+  const { hasRole } = useAuth();
+  const { visibleWidgets, widgets, loading: widgetsLoading, updateLayout, toggleWidget } = useDashboard();
   const [stats, setStats] = useState(null);
   const [charts, setCharts] = useState(null);
   const [warnings, setWarnings] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [dataLoading, setDataLoading] = useState(true);
   const [exporting, setExporting] = useState('');
-  const [lastUpdated, setLastUpdated] = useState(null);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
+  const [isCustomizing, setIsCustomizing] = useState(false);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
+  const fetchData = useCallback(async () => {
+    try {
+      const [s, c, w] = await Promise.all([
+        api.get('/dashboard/stats'),
+        api.get('/dashboard/charts'),
+        api.get('/forecasts/early-warnings'),
+      ]);
+      setStats(s.data);
+      setCharts(c.data);
+      setWarnings(w.data.warnings || []);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setDataLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData]);
 
   const handleExport = async (type) => {
     setExporting(type);
@@ -73,28 +110,18 @@ export default function DashboardPage() {
     setExporting('');
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [s, c, w] = await Promise.all([
-          api.get('/dashboard/stats'),
-          api.get('/dashboard/charts'),
-          api.get('/forecasts/early-warnings'),
-        ]);
-        setStats(s.data);
-        setCharts(c.data);
-        setWarnings(w.data.warnings || []);
-        setLastUpdated(new Date());
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-    const interval = setInterval(fetchData, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+    if (active.id !== over?.id) {
+      const oldIndex = visibleWidgets.findIndex(w => w.id === active.id);
+      const newIndex = visibleWidgets.findIndex(w => w.id === over.id);
+      const reordered = arrayMove(visibleWidgets, oldIndex, newIndex);
+      await updateLayout(reordered);
+    }
+  };
+
+  const loading = widgetsLoading || dataLoading;
+  const totalCategories = charts?.categories?.length || 0;
 
   if (loading) return (
     <div className="space-y-6">
@@ -110,7 +137,167 @@ export default function DashboardPage() {
     </div>
   );
 
-  const totalCategories = charts?.categories?.length || 0;
+  // Render a widget by its key
+  const renderWidget = (widget) => {
+    switch (widget.widget_key) {
+      case 'stat_total_units':
+        return (
+          <StatCard icon={Package} label="Total Units" value={stats?.total_units || 0} trend={stats?.total_units > 0 ? `${totalCategories} categories` : null} color="indigo" />
+        );
+      case 'stat_stockout':
+        return (
+          <StatCard icon={AlertTriangle} label="Stockout Items" value={stats?.stockout_items || 0} trend={stats?.stockout_items > 0 ? 'Needs attention' : 'All good'} color={stats?.stockout_items > 0 ? 'red' : 'green'} />
+        );
+      case 'stat_pending':
+        return (
+          <StatCard icon={ClipboardCheck} label="Pending Approvals" value={stats?.pending_approvals || 0} trend={stats?.pending_approvals > 0 ? 'Awaiting review' : 'None pending'} color={stats?.pending_approvals > 0 ? 'yellow' : 'green'} />
+        );
+      case 'stat_warnings':
+        return (
+          <StatCard icon={BarChart3} label="Early Warnings" value={warnings.length} trend={warnings.length > 0 ? 'Stock alerts' : 'No warnings'} color={warnings.length > 0 ? 'purple' : 'green'} />
+        );
+      case 'chart_category':
+        return (
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Category Distribution</h3>
+            <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Items grouped by category</p>
+            {charts?.categories?.length > 0 ? (
+              <div className="flex items-center gap-4">
+                <ResponsiveContainer width="60%" height={260}>
+                  <PieChart>
+                    <Pie data={charts.categories.map(d => ({ ...d, percent: d.count / charts.categories.reduce((s, c) => s + c.count, 0) }))} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} strokeWidth={0} label={PieLabel}>
+                      {charts.categories.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="flex-1 space-y-2">
+                  {charts.categories.map((c, i) => (
+                    <div key={i} className="flex items-center gap-2 text-xs">
+                      <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
+                      <span className="text-gray-600 truncate flex-1 dark:text-gray-400">{c.name}</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-200">{c.count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
+          </div>
+        );
+      case 'chart_trends':
+        return (
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">30-Day Stock Trends</h3>
+            <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Daily stock in / out movements</p>
+            {charts?.trends?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={260}>
+                <AreaChart data={charts.trends}>
+                  <defs>
+                    <linearGradient id="inGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                    </linearGradient>
+                    <linearGradient id="outGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
+                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
+                  <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} tickFormatter={(v) => v?.slice(5) || ''} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(107, 114, 128, 0.3)' }} />
+                  <Area type="monotone" dataKey="in" stroke="#10b981" strokeWidth={2.5} fill="url(#inGradient)" name="In" dot={false} activeDot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} />
+                  <Area type="monotone" dataKey="out" stroke="#ef4444" strokeWidth={2.5} fill="url(#outGradient)" name="Out" dot={false} activeDot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
+          </div>
+        );
+      case 'chart_top_moving':
+        return (
+          <div className="p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Top Moving Items</h3>
+            <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Highest stock-out quantities in the last 30 days</p>
+            {charts?.top_moving_items?.length > 0 ? (
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={charts.top_moving_items} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
+                      <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.15)' }} />
+                  <Bar dataKey="total_out" fill="url(#barGradient)" name="Out Qty" radius={[6, 6, 0, 0]} maxBarSize={40} />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
+          </div>
+        );
+      case 'list_warnings':
+        return (
+          <div className="p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="p-1.5 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">
+                <AlertTriangle size={16} />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Early Stockout Warnings</h3>
+                <p className="text-xs text-gray-400 dark:text-gray-500">Items predicted to run out within 7 days</p>
+              </div>
+            </div>
+            {warnings.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {warnings.slice(0, widget.meta?.maxItems || 6).map((w, i) => (
+                  <div key={i} className="flex items-center justify-between p-3.5 bg-red-50/70 rounded-xl border border-red-100/50 dark:bg-red-900/20 dark:border-red-900/30">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-800 truncate dark:text-gray-200">{w.item.name}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">SKU: {w.item.sku}</p>
+                    </div>
+                    <div className="text-right flex-shrink-0 ml-3">
+                      <p className="text-sm font-bold text-red-600 dark:text-red-400">{w.current_stock}</p>
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">~{w.days_until_stockout}d left</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center mx-auto mb-3 dark:bg-green-900/20">
+                  <ClipboardCheck size={20} className="text-green-500 dark:text-green-400" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No warnings</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">All stock levels are healthy</p>
+              </div>
+            )}
+          </div>
+        );
+      default:
+        return (
+          <div className="p-5">
+            <p className="text-gray-400 text-center py-8 dark:text-gray-500">Unknown widget: {widget.widget_key}</p>
+          </div>
+        );
+    }
+  };
+
+  // Determine grid class based on widget size
+  const getWidgetGridClass = (widget) => {
+    const size = widget.meta?.size || (widget.widget_type === 'stat' ? 'quarter' : 'half');
+    switch (size) {
+      case 'full': return 'col-span-1 lg:col-span-2';
+      case 'half': return 'col-span-1';
+      case 'quarter':
+      default: return 'col-span-1';
+    }
+  };
+
+  // Separate stat widgets from others for the top row
+  const statWidgets = visibleWidgets.filter(w => w.widget_type === 'stat');
+  const otherWidgets = visibleWidgets.filter(w => w.widget_type !== 'stat');
 
   return (
     <div className="space-y-6">
@@ -121,7 +308,17 @@ export default function DashboardPage() {
           <p className="text-sm text-gray-500 mt-0.5 dark:text-gray-400">Warehouse monitoring overview</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <button onClick={() => { setLoading(true); fetchData(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 dark:hover:bg-gray-800 dark:text-gray-500 dark:hover:text-gray-300" title="Refresh">
+          {/* Customize button */}
+          <button
+            onClick={() => setCustomizeOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700"
+            title="Customize dashboard widgets"
+          >
+            <Settings2 size={14} />
+            Customize
+          </button>
+
+          <button onClick={() => { setDataLoading(true); fetchData(); }} className="p-2 rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 dark:hover:bg-gray-800 dark:text-gray-500 dark:hover:text-gray-300" title="Refresh">
             <RefreshCw size={16} />
           </button>
           <div className="flex items-center gap-2 text-xs text-gray-400 bg-white px-3 py-1.5 rounded-full border border-gray-200 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-500">
@@ -156,123 +353,66 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Stats cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard icon={Package} label="Total Units" value={stats?.total_units || 0} trend={stats?.total_units > 0 ? `${totalCategories} categories` : null} color="indigo" />
-        <StatCard icon={AlertTriangle} label="Stockout Items" value={stats?.stockout_items || 0} trend={stats?.stockout_items > 0 ? 'Needs attention' : 'All good'} color={stats?.stockout_items > 0 ? 'red' : 'green'} />
-        <StatCard icon={ClipboardCheck} label="Pending Approvals" value={stats?.pending_approvals || 0} trend={stats?.pending_approvals > 0 ? 'Awaiting review' : 'None pending'} color={stats?.pending_approvals > 0 ? 'yellow' : 'green'} />
-        <StatCard icon={BarChart3} label="Early Warnings" value={warnings.length} trend={warnings.length > 0 ? 'Stock alerts' : 'No warnings'} color={warnings.length > 0 ? 'purple' : 'green'} />
-      </div>
+      {/* Stats row - always in a 4-col grid */}
+      {statWidgets.length > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {statWidgets.map(widget => (
+            <DraggableWidget
+              key={widget.id}
+              widget={widget}
+              onToggle={toggleWidget}
+              isCustomizing={isCustomizing}
+            >
+              {renderWidget(widget)}
+            </DraggableWidget>
+          ))}
+        </div>
+      )}
 
-      {/* Charts row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category distribution */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Category Distribution</h3>
-          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Items grouped by category</p>
-          {charts?.categories?.length > 0 ? (
-            <div className="flex items-center gap-4">
-              <ResponsiveContainer width="60%" height={260}>
-                <PieChart>
-                  <Pie data={charts.categories.map(d => ({ ...d, percent: d.count / charts.categories.reduce((s, c) => s + c.count, 0) }))} dataKey="count" nameKey="name" cx="50%" cy="50%" innerRadius={55} outerRadius={95} paddingAngle={3} strokeWidth={0} label={PieLabel}>
-                    {charts.categories.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                  </Pie>
-                  <Tooltip content={<PieTooltip />} />
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="flex-1 space-y-2">
-                {charts.categories.map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 text-xs">
-                    <span className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: PIE_COLORS[i % PIE_COLORS.length] }} />
-                    <span className="text-gray-600 truncate flex-1 dark:text-gray-400">{c.name}</span>
-                    <span className="font-semibold text-gray-800 dark:text-gray-200">{c.count}</span>
+      {/* Charts & other widgets - drag and drop */}
+      {otherWidgets.length > 0 && (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={otherWidgets.map(w => w.id)} strategy={verticalListSortingStrategy}>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {otherWidgets.map(widget => (
+                <DraggableWidget
+                  key={widget.id}
+                  widget={widget}
+                  onToggle={toggleWidget}
+                  isCustomizing={isCustomizing}
+                >
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
+                    {renderWidget(widget)}
                   </div>
-                ))}
-              </div>
+                </DraggableWidget>
+              ))}
             </div>
-          ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
-        </div>
+          </SortableContext>
+        </DndContext>
+      )}
 
-        {/* 30-day trends */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">30-Day Stock Trends</h3>
-          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Daily stock in / out movements</p>
-          {charts?.trends?.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={charts.trends}>
-                <defs>
-                  <linearGradient id="inGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="outGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
-                <XAxis dataKey="date" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} tickFormatter={(v) => v?.slice(5) || ''} />
-                <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-                <Tooltip content={<CustomTooltip />} cursor={{ stroke: 'rgba(107, 114, 128, 0.3)' }} />
-                <Area type="monotone" dataKey="in" stroke="#10b981" strokeWidth={2.5} fill="url(#inGradient)" name="In" dot={false} activeDot={{ r: 4, fill: '#10b981', strokeWidth: 0 }} />
-                <Area type="monotone" dataKey="out" stroke="#ef4444" strokeWidth={2.5} fill="url(#outGradient)" name="Out" dot={false} activeDot={{ r: 4, fill: '#ef4444', strokeWidth: 0 }} />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : <p className="text-gray-400 text-center py-12 dark:text-gray-500">No data</p>}
-        </div>
-      </div>
-
-      {/* Top moving items */}
-      {charts?.top_moving_items?.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow dark:bg-gray-900 dark:border-gray-800">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1 dark:text-gray-200">Top Moving Items</h3>
-          <p className="text-xs text-gray-400 mb-4 dark:text-gray-500">Highest stock-out quantities in the last 30 days</p>
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={charts.top_moving_items} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <defs>
-                <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity={1} />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity={0.6} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} className="dark:stroke-gray-800" />
-              <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 10, fill: '#9ca3af' }} tickLine={false} axisLine={false} />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(107, 114, 128, 0.15)' }} />
-              <Bar dataKey="total_out" fill="url(#barGradient)" name="Out Qty" radius={[6, 6, 0, 0]} maxBarSize={40} />
-            </BarChart>
-          </ResponsiveContainer>
+      {/* Empty state when all widgets are hidden */}
+      {visibleWidgets.length === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-12 dark:bg-gray-900 dark:border-gray-800">
+          <EmptyState
+            icon="dashboard"
+            title="No widgets visible"
+            description="Click 'Customize' to add widgets to your dashboard."
+            action={
+              <button
+                onClick={() => setCustomizeOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-primary-600 text-white hover:bg-primary-700 transition-colors"
+              >
+                <Settings2 size={16} />
+                Customize Dashboard
+              </button>
+            }
+          />
         </div>
       )}
 
-      {/* Early warnings */}
-      {warnings.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow border-l-4 border-l-red-400 dark:bg-gray-900 dark:border-gray-800">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="p-1.5 rounded-lg bg-red-50 text-red-600 dark:bg-red-900/20 dark:text-red-400">
-              <AlertTriangle size={16} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-red-700 dark:text-red-400">Early Stockout Warnings</h3>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Items predicted to run out within 7 days</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {warnings.slice(0, 6).map((w, i) => (
-              <div key={i} className="flex items-center justify-between p-3.5 bg-red-50/70 rounded-xl border border-red-100/50 dark:bg-red-900/20 dark:border-red-900/30">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-gray-800 truncate dark:text-gray-200">{w.item.name}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">SKU: {w.item.sku}</p>
-                </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <p className="text-sm font-bold text-red-600 dark:text-red-400">{w.current_stock}</p>
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500">~{w.days_until_stockout}d left</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Customize modal */}
+      <DashboardCustomizeModal open={customizeOpen} onClose={() => setCustomizeOpen(false)} />
     </div>
   );
 }
