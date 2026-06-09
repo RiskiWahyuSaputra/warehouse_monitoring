@@ -100,7 +100,7 @@ class DashboardWidgetController extends Controller
             'admin' => self::adminDefaults(),
             'manager' => self::managerDefaults(),
             default => self::staffDefaults(),
-        ];
+        };
 
         $widgets = [];
         foreach ($defaults as $index => $default) {
