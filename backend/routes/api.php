@@ -106,6 +106,14 @@ Route::middleware('auth:sanctum')->group(function () {
         // Forecast management
         Route::post('/forecasts/generate', [ForecastController::class, 'generate']);
         Route::post('/forecasts/record-variances', [ForecastController::class, 'recordVariances']);
+
+        // Backup & Restore — admin only
+        Route::prefix('backup')->group(function () {
+            Route::get('/', [BackupController::class, 'index']);
+            Route::post('/', [BackupController::class, 'store']);
+            Route::get('/download/{filename}', [BackupController::class, 'download']);
+            Route::delete('/{filename}', [BackupController::class, 'destroy']);
+        });
     });
 
     // Staff can read inventory items
