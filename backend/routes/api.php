@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\ApprovalController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DashboardWidgetController;
 use App\Http\Controllers\Api\ExportController;
