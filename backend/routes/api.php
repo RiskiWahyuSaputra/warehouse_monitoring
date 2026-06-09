@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BarcodeController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\DashboardWidgetController;
 use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\ForecastController;
 use App\Http\Controllers\Api\InventoryItemController;
@@ -28,6 +29,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Dashboard — all authenticated users
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     Route::get('/dashboard/charts', [DashboardController::class, 'charts']);
+
+    // Dashboard widget customization — all authenticated users
+    Route::get('/dashboard/widgets', [DashboardWidgetController::class, 'index']);
+    Route::put('/dashboard/widgets/layout', [DashboardWidgetController::class, 'updateLayout']);
+    Route::post('/dashboard/widgets/reset', [DashboardWidgetController::class, 'reset']);
+    Route::patch('/dashboard/widgets/{widget}/toggle', [DashboardWidgetController::class, 'toggle']);
 
     // Stock movements — all authenticated users
     Route::get('/inventory/movements', [StockMovementController::class, 'index']);
