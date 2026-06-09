@@ -1,14 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import api, { downloadFile } from '../services/api';
-import { useAuth } from '../context/AuthContext';
 import { useDashboard } from '../context/DashboardContext';
-import { TrendingUp, TrendingDown, Package, AlertTriangle, ClipboardCheck, BarChart3, Boxes, Download, FileSpreadsheet, FileText, RefreshCw, Settings2 } from 'lucide-react';
+import { Package, AlertTriangle, ClipboardCheck, BarChart3, FileSpreadsheet, FileText, RefreshCw, Settings2 } from 'lucide-react';
 import { Skeleton, StatCardSkeleton, CardSkeleton } from '../components/Skeleton';
 import { EmptyState } from '../components/EmptyState';
 import DashboardCustomizeModal from '../components/DashboardCustomize';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
-import { DraggableWidget } from '../components/DashboardWidget';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell, Area, AreaChart } from 'recharts';
 
 const PIE_COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316'];
