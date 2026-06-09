@@ -13,3 +13,6 @@ Schedule::command('forecasts:generate')->dailyAt('06:00');
 
 // Daily low stock check at 8:00 AM
 Schedule::command('inventory:check-low-stock')->dailyAt('08:00');
+
+// Daily backup at 2:00 AM (keep last 7 backups)
+Schedule::command('backup:run --keep=7')->dailyAt('02:00');
