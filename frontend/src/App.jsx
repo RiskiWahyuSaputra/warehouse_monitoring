@@ -11,6 +11,7 @@ import DashboardPage from './pages/Dashboard';
 import InventoryPage from './pages/Inventory';
 import MovementsPage from './pages/Movements';
 import ApprovalsPage from './pages/Approvals';
+import EmailSettingsPage from './pages/EmailSettings';
 import ForecastsPage from './pages/Forecasts';
 import UsersPage from './pages/Users';
 import NotificationsPage from './pages/Notifications';
@@ -43,6 +44,7 @@ export default function App() {
                   <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />
                   <Route path="/forecasts" element={<ProtectedRoute><ForecastsPage /></ProtectedRoute>} />
                   <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                  <Route path="/email-settings" element={<ProtectedRoute roles={['admin', 'manager']}><EmailSettingsPage /></ProtectedRoute>} />
                   <Route path="/users" element={<ProtectedRoute roles={['admin', 'manager']}><UsersPage /></ProtectedRoute>} />
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>

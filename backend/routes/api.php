@@ -114,6 +114,9 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/download/{filename}', [BackupController::class, 'download']);
             Route::delete('/{filename}', [BackupController::class, 'destroy']);
         });
+
+        // Email test — admin only
+        Route::post('/email/test', [BackupController::class, 'testEmail']);
     });
 
     // Staff can read inventory items
