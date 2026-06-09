@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ApprovalRequest;
 use App\Models\StockLevel;
 use App\Models\StockMovement;
+use App\Services\NotificationEmailService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -45,6 +46,13 @@ class ApprovalController extends Controller
             'remarks' => $validated['remarks'] ?? null,
             'status' => ApprovalStatus::PENDING,
         ]);
+
+        // Send email notification to admin/manager
+        try {
+            app(NotificationEmailService::class)->sendApprovalNotification($approval->load('requester', 'item'));
+        } catch (\Exception $e) {
+            report("Failed to send approval email: " . $e->getMessage());
+        }
 
         return response()->json($approval, Response::HTTP_CREATED);
     }
