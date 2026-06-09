@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { DndContext, closestCenter, KeyboardSensor, PointerSensor, useSensor, useSensors } from '@dnd-kit/core';
-import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { arrayMove, SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy, useSortable } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useDashboard, AVAILABLE_WIDGETS } from '../context/DashboardContext';
 import { useToast } from '../context/ToastContext';
 import { X, GripVertical, Eye, EyeOff, RotateCcw, Settings2, Check } from 'lucide-react';
 
 export default function DashboardCustomizeModal({ open, onClose }) {
-  const { widgets, updateLayout, toggleWidget, resetToDefaults, saving } = useDashboard();
+  const { widgets, updateLayout, resetToDefaults, saving } = useDashboard();
   const toast = useToast();
   const [localWidgets, setLocalWidgets] = useState([]);
   const [hasChanges, setHasChanges] = useState(false);
@@ -31,8 +32,7 @@ export default function DashboardCustomizeModal({ open, onClose }) {
       setLocalWidgets(prev => {
         const oldIndex = prev.findIndex(w => w.id === active.id);
         const newIndex = prev.findIndex(w => w.id === over.id);
-        const updated = arrayMove(prev, oldIndex, newIndex).map((w, i) => ({ ...w, position: i }));
-        return updated;
+        return arrayMove(prev, oldIndex, newIndex).map((w, i) => ({ ...w, position: i }));
       });
       setHasChanges(true);
     }
@@ -65,21 +65,6 @@ export default function DashboardCustomizeModal({ open, onClose }) {
     } else {
       toast('Failed to reset', 'error');
     }
-  };
-
-  // Group widgets by type for the UI
-  const grouped = {
-    stat: localWidgets.filter(w => w.widget_type === 'stat'),
-    chart: localWidgets.filter(w => w.widget_type === 'chart'),
-    warning: localWidgets.filter(w => w.widget_type === 'warning'),
-    list: localWidgets.filter(w => w.widget_type === 'list'),
-  };
-
-  const typeLabels = {
-    stat: 'Stat Cards',
-    chart: 'Charts',
-    warning: 'Warnings',
-    list: 'Lists',
   };
 
   return (
@@ -181,7 +166,7 @@ function SortableWidgetItem({ widget, def, onToggle }) {
       className={`flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all ${
         isDragging
           ? 'bg-primary-50 border-primary-200 shadow-lg dark:bg-primary-900/20 dark:border-primary-800'
-          : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-750'
+          : 'bg-white border-gray-100 hover:border-gray-200 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-700 dark:hover:border-gray-600'
       } ${!widget.visible ? 'opacity-60' : ''}`}
     >
       {/* Drag handle */}
@@ -225,6 +210,3 @@ function SortableWidgetItem({ widget, def, onToggle }) {
     </div>
   );
 }
-
-// Need to import CSS from @dnd-kit/utilities
-import { CSS } from '@dnd-kit/utilities';
