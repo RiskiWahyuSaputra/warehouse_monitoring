@@ -4,6 +4,7 @@ import { ToastProvider } from './context/ToastContext';
 import { ConfirmProvider } from './context/ConfirmContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { GlobalSearchProvider } from './context/GlobalSearchContext';
+import { DashboardProvider } from './context/DashboardContext';
 import ProtectedRoute from './components/ProtectedRoute';
 import LoginPage from './pages/Login';
 import DashboardPage from './pages/Dashboard';
@@ -29,7 +30,7 @@ export default function App() {
               <BrowserRouter>
                 <Routes>
                   <Route path="/login" element={<LoginPage />} />
-                  <Route path="/" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+                  <Route path="/" element={<ProtectedRoute><DashboardProvider><DashboardPage /></DashboardProvider></ProtectedRoute>} />
                   <Route path="/inventory" element={<ProtectedRoute><InventoryPage /></ProtectedRoute>} />
                   <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
                   <Route path="/locations" element={<ProtectedRoute><LocationsPage /></ProtectedRoute>} />
