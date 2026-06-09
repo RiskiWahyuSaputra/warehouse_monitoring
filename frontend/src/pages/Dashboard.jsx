@@ -49,8 +49,7 @@ function PieLabel({ name, percent }) {
 }
 
 export default function DashboardPage() {
-  const { hasRole } = useAuth();
-  const { visibleWidgets, widgets, loading: widgetsLoading, updateLayout, toggleWidget } = useDashboard();
+  const { visibleWidgets, loading: widgetsLoading, updateLayout, toggleWidget } = useDashboard();
   const [stats, setStats] = useState(null);
   const [charts, setCharts] = useState(null);
   const [warnings, setWarnings] = useState([]);
