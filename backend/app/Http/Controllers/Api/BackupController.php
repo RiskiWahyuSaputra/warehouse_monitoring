@@ -193,14 +193,17 @@ class BackupController extends Controller
         $dbName = config('database.connections.' . config('database.default') . '.database');
 
         foreach ($tables as $table) {
-            $tableName = $table->{'Tables_in_' . $dbName} ?? reset((array) $table);
+            $tableArray = (array) $table;
+            $firstVal = array_values($tableArray)[0] ?? 'unknown';
+            $tableName = $table->{'Tables_in_' . $dbName} ?? $firstVal;
 
             // Skip migration table untuk avoid conflicts
             if ($tableName === 'migrations') continue;
 
             // Get create table
             $create = DB::select("SHOW CREATE TABLE `{$tableName}`");
-            $createSql = $create[0]->{'Create Table'} ?? reset((array) $create[1] ?? []);
+            $createRow = (array) ($create[0] ?? []);
+            $createSql = $createRow['Create Table'] ?? array_values((array) ($create[1] ?? []))[0] ?? '';
             $sql .= "DROP TABLE IF EXISTS `{$tableName}`;\n";
             $sql .= $createSql . ";\n\n";
 
