@@ -19,7 +19,7 @@ import BackupPage from './pages/Backup';
 import CategoriesPage from './pages/Categories';
 import LocationsPage from './pages/Locations';
 import SuppliersPage from './pages/Suppliers';
-import AuditLogsPage from './pages/AuditLogs';
+import BarcodePage from './pages/Barcode';
 
 export default function App() {
   return (
@@ -37,6 +37,7 @@ export default function App() {
                   <Route path="/locations" element={<ProtectedRoute><LocationsPage /></ProtectedRoute>} />
                   <Route path="/suppliers" element={<ProtectedRoute><SuppliersPage /></ProtectedRoute>} />
                   <Route path="/audit-logs" element={<ProtectedRoute roles={['admin', 'manager']}><AuditLogsPage /></ProtectedRoute>} />
+                  <Route path="/backup" element={<ProtectedRoute roles={['admin', 'manager']}><BackupPage /></ProtectedRoute>} />
                   <Route path="/barcode" element={<ProtectedRoute><BarcodePage /></ProtectedRoute>} />
                   <Route path="/movements" element={<ProtectedRoute><MovementsPage /></ProtectedRoute>} />
                   <Route path="/approvals" element={<ProtectedRoute><ApprovalsPage /></ProtectedRoute>} />

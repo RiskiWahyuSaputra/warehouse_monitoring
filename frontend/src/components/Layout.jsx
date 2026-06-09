@@ -4,7 +4,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useGlobalSearch } from '../context/GlobalSearchContext';
 import {
   LayoutDashboard, Package, ArrowRightLeft, ClipboardCheck,
-  Users, BarChart3, ScanBarcode, LogOut, Menu, X, Bell, Tag, MapPin, Truck, FileText, Sun, Moon, Search
+  Users, BarChart3, ScanBarcode, LogOut, Menu, X, Bell, Tag, MapPin, Truck, FileText, Sun, Moon, Search, HardDrive
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import api from '../services/api';
@@ -22,6 +22,7 @@ const navItems = [
   { to: '/forecasts', icon: BarChart3, label: 'Forecasts', roles: ['admin', 'manager', 'staff'] },
   { to: '/notifications', icon: Bell, label: 'Notifications', roles: ['admin', 'manager', 'staff'] },
   { to: '/audit-logs', icon: FileText, label: 'Audit Logs', roles: ['admin', 'manager'] },
+  { to: '/backup', icon: HardDrive, label: 'Backup', roles: ['admin', 'manager'] },
   { to: '/users', icon: Users, label: 'Users', roles: ['admin', 'manager'] },
 ];
 
