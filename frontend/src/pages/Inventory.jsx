@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import Barcode from 'react-barcode';
+import { QRCodeCanvas } from 'qrcode.react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { useConfirm } from '../context/ConfirmContext';
 import { useGlobalSearch } from '../context/GlobalSearchContext';
-import { Plus, Search, Edit2, Trash2, X, Package, Tag, SlidersHorizontal } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, X, Package, Tag, SlidersHorizontal, RefreshCw, QrCode, Download } from 'lucide-react';
 import { TableSkeleton } from '../components/Skeleton';
 import { EmptyState, EmptySearch } from '../components/EmptyState';
 
@@ -21,10 +23,51 @@ export default function InventoryPage() {
   const [page, setPage] = useState(1);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', sku: '', description: '', category_id: '', barcode: '', min_stock: 0, price: 0 });
+  const [form, setForm] = useState({ name: '', sku: '', description: '', category_id: '', barcode: '', min_stock: 0, unit: 'pcs' });
   const [saving, setSaving] = useState(false);
+  const [codeModal, setCodeModal] = useState(null);
+  const qrRef = useRef(null);
+  const barcodeRef = useRef(null);
 
   const isAdmin = hasRole('admin', 'manager');
+
+  const downloadQR = useCallback(() => {
+    const canvas = qrRef.current?.querySelector('canvas');
+    if (!canvas) return;
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `qrcode-${codeModal?.barcode || 'item'}.png`;
+    link.href = url;
+    link.click();
+  }, [codeModal]);
+
+  const downloadBarcode = useCallback(() => {
+    const svg = barcodeRef.current?.querySelector('svg');
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    img.onload = () => {
+      canvas.width = img.width * 2;
+      canvas.height = img.height * 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const url = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `barcode-${codeModal?.barcode || 'item'}.png`;
+      link.href = url;
+      link.click();
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  }, [codeModal]);
+
+  const generateBarcode = () => {
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 6).toUpperCase();
+    setForm((prev) => ({ ...prev, barcode: `BC-${timestamp}-${random}` }));
+  };
 
   // Sync global search query to local search
   useEffect(() => {
@@ -53,7 +96,7 @@ export default function InventoryPage() {
   }, [page, search, activeFilters]);
 
   const resetForm = () => {
-    setForm({ name: '', sku: '', description: '', category_id: '', barcode: '', min_stock: 0, price: 0 });
+    setForm({ name: '', sku: '', description: '', category_id: '', barcode: '', min_stock: 0, unit: 'pcs' });
     setEditing(null);
     setShowForm(false);
   };
@@ -62,7 +105,7 @@ export default function InventoryPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      const data = { ...form, min_stock: Number(form.min_stock), price: Number(form.price) };
+      const data = { ...form, min_stock: Number(form.min_stock) };
       if (editing) {
         await api.put(`/inventory-items/${editing.id}`, data);
         toast('Item updated', 'success');
@@ -91,7 +134,7 @@ export default function InventoryPage() {
   };
 
   const startEdit = (item) => {
-    setForm({ name: item.name, sku: item.sku, description: item.description || '', category_id: item.category_id || '', barcode: item.barcode || '', min_stock: item.min_stock, price: item.price });
+    setForm({ name: item.name, sku: item.sku, description: item.description || '', category_id: item.category_id || '', barcode: item.barcode || '', min_stock: item.min_stock, unit: item.unit || 'pcs' });
     setEditing(item);
     setShowForm(true);
   };
@@ -133,7 +176,7 @@ export default function InventoryPage() {
 
       <div className="card overflow-hidden">
         {loading ? (
-          <div className="p-4"><TableSkeleton rows={5} cols={isAdmin ? 7 : 6} /></div>
+          <div className="p-4"><TableSkeleton rows={5} cols={isAdmin ? 8 : 7} /></div>
         ) : items.length === 0 ? (
           search ? (
             <EmptySearch searchTerm={search} onClear={() => { setSearch(''); setPage(1); }} />
@@ -149,10 +192,11 @@ export default function InventoryPage() {
                 <tr>
                   <th className="text-left px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Item</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell dark:text-gray-400">SKU</th>
+                  <th className="text-left px-4 py-3 font-medium text-gray-600 hidden md:table-cell dark:text-gray-400">Barcode</th>
                   <th className="text-left px-4 py-3 font-medium text-gray-600 hidden lg:table-cell dark:text-gray-400">Category</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Stock</th>
                   <th className="text-right px-4 py-3 font-medium text-gray-600 hidden sm:table-cell dark:text-gray-400">Min</th>
-                  <th className="text-right px-4 py-3 font-medium text-gray-600 hidden lg:table-cell dark:text-gray-400">Price</th>
+                  <th className="text-right px-4 py-3 font-medium text-gray-600 hidden lg:table-cell dark:text-gray-400">Unit</th>
                   {isAdmin && <th className="text-right px-4 py-3 font-medium text-gray-600 dark:text-gray-400">Actions</th>}
                 </tr>
               </thead>
@@ -164,6 +208,17 @@ export default function InventoryPage() {
                       {item.description && <p className="text-xs text-gray-400 dark:text-gray-500 truncate max-w-[200px]">{item.description}</p>}
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden md:table-cell dark:text-gray-400 font-mono text-xs">{item.sku}</td>
+                    <td className="px-4 py-3 hidden md:table-cell">
+                      {item.barcode ? (
+                        <button
+                          onClick={() => setCodeModal(item)}
+                          className="inline-flex items-center gap-1 text-xs font-mono text-primary-600 hover:text-primary-700 dark:text-primary-400 dark:hover:text-primary-300 hover:underline"
+                          title="View Barcode & QR Code"
+                        >
+                          <QrCode size={14} /> {item.barcode}
+                        </button>
+                      ) : '-'}
+                    </td>
                     <td className="px-4 py-3 hidden lg:table-cell">
                       {item.category ? <span className="badge badge-info">{item.category.name}</span> : '-'}
                     </td>
@@ -173,7 +228,7 @@ export default function InventoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-right text-gray-500 hidden sm:table-cell dark:text-gray-400">{item.min_stock}</td>
-                    <td className="px-4 py-3 text-right text-gray-500 hidden lg:table-cell dark:text-gray-400">{item.price ? `Rp ${Number(item.price).toLocaleString()}` : '-'}</td>
+                    <td className="px-4 py-3 text-right text-gray-500 hidden lg:table-cell dark:text-gray-400">{item.unit || '-'}</td>
                     {isAdmin && (
                       <td className="px-4 py-3 text-right">
                         <button onClick={() => startEdit(item)} className="p-1.5 rounded hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400" title="Edit"><Edit2 size={14} /></button>
@@ -216,8 +271,8 @@ export default function InventoryPage() {
                   <input className="input" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} required />
                 </div>
                 <div>
-                  <label className="label">Category</label>
-                  <select className="input" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })}>
+                  <label className="label">Category *</label>
+                  <select className="input" value={form.category_id} onChange={(e) => setForm({ ...form, category_id: e.target.value })} required>
                     <option value="">Select...</option>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
@@ -229,8 +284,19 @@ export default function InventoryPage() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="label">Barcode</label>
-                  <input className="input" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
+                  <label className="label">Barcode *</label>
+                  <div className="flex gap-2">
+                    <input className="input flex-1" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} required />
+                    <button type="button" onClick={generateBarcode} className="btn-secondary flex items-center gap-1 whitespace-nowrap" title="Generate Barcode">
+                      <RefreshCw size={14} /> Generate
+                    </button>
+                  </div>
+                  {form.barcode && (
+                    <div className="mt-2 flex items-center justify-center gap-4 p-3 bg-white rounded border dark:border-gray-600">
+                      <Barcode value={form.barcode} width={1.5} height={50} fontSize={12} margin={5} />
+                      <QRCodeCanvas value={form.barcode} size={80} level="H" includeMargin />
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="label">Min Stock</label>
@@ -238,14 +304,60 @@ export default function InventoryPage() {
                 </div>
               </div>
               <div>
-                <label className="label">Price</label>
-                <input className="input" type="number" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} />
+                <label className="label">Unit *</label>
+                <select className="input" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })} required>
+                  <option value="pcs">pcs</option>
+                  <option value="box">box</option>
+                  <option value="kg">kg</option>
+                  <option value="liter">liter</option>
+                  <option value="meter">meter</option>
+                  <option value="unit">unit</option>
+                </select>
               </div>
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={resetForm} className="btn-secondary" disabled={saving}>Cancel</button>
                 <button type="submit" className="btn-primary" disabled={saving}>{saving ? 'Saving...' : editing ? 'Update' : 'Create'}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {codeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={() => setCodeModal(null)}>
+          <div className="card w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-4 border-b dark:border-gray-700">
+              <h2 className="text-lg font-semibold dark:text-gray-100">{codeModal.name}</h2>
+              <button onClick={() => setCodeModal(null)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-700 dark:text-gray-400"><X size={18} /></button>
+            </div>
+            <div className="p-6 space-y-6">
+              <div className="text-center">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">Barcode</p>
+                <div ref={barcodeRef} className="inline-block bg-white p-4 rounded border dark:border-gray-600">
+                  <Barcode value={codeModal.barcode} width={2} height={60} fontSize={14} margin={5} />
+                </div>
+                <div className="mt-2">
+                  <button onClick={downloadBarcode} className="btn-secondary btn-sm inline-flex items-center gap-1">
+                    <Download size={14} /> Download Barcode
+                  </button>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-3">QR Code</p>
+                <div ref={qrRef} className="inline-block bg-white p-4 rounded border dark:border-gray-600">
+                  <QRCodeCanvas value={codeModal.barcode} size={200} level="H" includeMargin />
+                </div>
+                <div className="mt-2">
+                  <button onClick={downloadQR} className="btn-secondary btn-sm inline-flex items-center gap-1">
+                    <Download size={14} /> Download QR Code
+                  </button>
+                </div>
+              </div>
+              <div className="text-center">
+                <p className="text-xs text-gray-400 dark:text-gray-500 font-mono">{codeModal.barcode}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">SKU: {codeModal.sku}</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
